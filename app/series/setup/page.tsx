@@ -85,8 +85,8 @@ export default function SetupPage() {
                     variant={playerCount === num ? "default" : "outline"}
                     className={`h-14 text-xl font-bold touch-manipulation transition-all ${
                       playerCount === num
-                        ? "bg-white text-black ring-2 ring-amber-500"
-                        : "border-white/20 hover:bg-white/5"
+                        ? "bg-black text-white ring-2 ring-amber-500"
+                        : "border-black/20 hover:bg-black/5"
                     }`}
                     onClick={() => handlePlayerCountChange(num)}
                     aria-pressed={playerCount === num}
@@ -116,8 +116,8 @@ export default function SetupPage() {
                   transition={{ delay: 0.1 * index }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-white/70" />
+                  <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-black/50" />
                   </div>
                   <Input
                     placeholder={`Тоглогч ${index + 1}…`}
@@ -141,7 +141,7 @@ export default function SetupPage() {
           <Button
             onClick={handleStart}
             disabled={!canStart}
-            className="w-full h-14 text-lg font-bold gap-2 bg-white text-black hover:bg-white/90 touch-manipulation"
+            className="w-full h-14 text-lg font-bold gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
           >
             <Play className="w-5 h-5" />
             ЭХЛЭХ

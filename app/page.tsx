@@ -77,7 +77,7 @@ export default function HomePage() {
             <Button
               variant="default"
               size="lg"
-              className="w-full h-14 text-lg font-medium bg-white text-black hover:bg-white/90 touch-manipulation"
+              className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
             >
               ЦУВАА ХАРВАА
             </Button>
@@ -90,7 +90,7 @@ export default function HomePage() {
             <Button
               variant="outline"
               size="lg"
-              className="w-full h-14 text-lg font-medium border-white/20 hover:bg-white/5 touch-manipulation"
+              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
             >
               ТОХИРГОО
             </Button>

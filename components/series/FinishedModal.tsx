@@ -64,7 +64,7 @@ export function FinishedModal({
                 className={`flex items-center justify-between p-3 rounded-lg ${
                   player.score === maxScore
                     ? "bg-amber-500/20 ring-1 ring-amber-500"
-                    : "bg-white/5"
+                    : "bg-black/5"
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export function FinishedModal({
         <div className="flex flex-col gap-2">
           <Button
             onClick={onDownload}
-            className="w-full h-12 gap-2 bg-white text-black hover:bg-white/90 touch-manipulation"
+            className="w-full h-12 gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
           >
             <Download className="w-4 h-4" />
             Зураг татах

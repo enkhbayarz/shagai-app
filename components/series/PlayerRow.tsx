@@ -31,8 +31,8 @@ export function PlayerRow({
       className={cn(
         "rounded-xl p-3 transition-all",
         isActive
-          ? "bg-[rgba(255,255,255,0.1)] ring-2 ring-[#f59e0b] active-glow"
-          : "bg-[rgba(255,255,255,0.05)]"
+          ? "bg-[rgba(0,0,0,0.05)] ring-2 ring-[#f59e0b] active-glow"
+          : "bg-[rgba(0,0,0,0.03)]"
       )}
     >
       {/* Player Info Row */}
@@ -41,14 +41,14 @@ export function PlayerRow({
           <div
             className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center",
-              isActive ? "bg-[rgba(245,158,11,0.2)]" : "bg-[rgba(255,255,255,0.1)]"
+              isActive ? "bg-[rgba(245,158,11,0.2)]" : "bg-[rgba(0,0,0,0.1)]"
             )}
             data-html2canvas-ignore="true"
           >
             <User
               className={cn(
                 "w-4 h-4",
-                isActive ? "text-[#f59e0b]" : "text-[rgba(255,255,255,0.7)]"
+                isActive ? "text-[#f59e0b]" : "text-[rgba(0,0,0,0.5)]"
               )}
             />
           </div>

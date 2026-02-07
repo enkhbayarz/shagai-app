@@ -21,8 +21,8 @@ export function ShotCircle({ state, isActive, onClick, size = "md" }: ShotCircle
     sizeClasses[size],
     state === true && "bg-[#10b981] text-white", // Hit - emerald-500
     state === false && "bg-[#f43f5e] text-white", // Miss - rose-500
-    state === null && "bg-[rgba(63,63,70,0.5)] border border-[#52525b]", // Not shot - zinc-700/50
-    isActive && state === null && "ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-black",
+    state === null && "bg-[rgba(0,0,0,0.08)] border border-[#d4d4d8]", // Not shot - light gray
+    isActive && state === null && "ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-white",
     onClick && "cursor-pointer hover:opacity-80",
     !onClick && "cursor-default"
   );

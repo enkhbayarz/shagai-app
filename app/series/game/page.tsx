@@ -178,7 +178,7 @@ export default function GamePage() {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(gameAreaRef.current, {
-        backgroundColor: "#0a0a0a",
+        backgroundColor: "#ffffff",
         scale: 2,
         useCORS: true,
         logging: false,
@@ -237,9 +237,9 @@ export default function GamePage() {
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-10 bg-[#0a0a0a]/80 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.1)]"
+          className="sticky top-0 z-10 bg-white/80 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-[rgba(0,0,0,0.1)]"
         >
-          <div className="font-score text-sm text-[#a3a3a3] tabular-nums">
+          <div className="font-score text-sm text-[#737373] tabular-nums">
             {currentTime.toLocaleDateString("mn-MN")}{" "}
             {currentTime.toLocaleTimeString("mn-MN")}
           </div>
@@ -247,7 +247,7 @@ export default function GamePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1 text-[#a3a3a3] hover:text-white touch-manipulation"
+              className="gap-1 text-[#737373] hover:text-black touch-manipulation"
               aria-label="Буцах"
             >
               <ArrowLeft className="w-4 h-4" />

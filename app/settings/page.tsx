@@ -85,7 +85,7 @@ export default function SettingsPage() {
 
             <Button
               onClick={handleSave}
-              className="w-full h-12 gap-2 touch-manipulation"
+              className="w-full h-12 gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
               disabled={!email || saved}
             >
               {saved ? (

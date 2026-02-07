@@ -49,7 +49,7 @@ export function ShotGroup({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="flex gap-1 p-1 rounded-lg bg-[rgba(255,255,255,0.1)]"
+            className="flex gap-1 p-1 rounded-lg bg-[rgba(0,0,0,0.05)]"
           >
             {groupShots.map((shot, localIndex) => (
               <ShotCircle
@@ -66,7 +66,7 @@ export function ShotGroup({
             ))}
             <button
               onClick={() => setIsExpanded(false)}
-              className="ml-1 text-xs text-[#a3a3a3] hover:text-white"
+              className="ml-1 text-xs text-[#737373] hover:text-black"
               aria-label="Хаах"
             >
               ✕
@@ -85,7 +85,7 @@ export function ShotGroup({
             onKeyDown={hasShots ? (e) => e.key === "Enter" && handleGroupClick() : undefined}
             className={cn(
               "flex gap-0.5 p-1 rounded-lg transition-all",
-              hasShots && "hover:bg-[rgba(255,255,255,0.05)] cursor-pointer",
+              hasShots && "hover:bg-[rgba(0,0,0,0.05)] cursor-pointer",
               !hasShots && "cursor-default"
             )}
             aria-label={hasShots ? "Засварлахын тулд дарна уу" : undefined}
