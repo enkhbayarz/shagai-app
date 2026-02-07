@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TargetIllustration } from "@/components/home/TargetIllustration";
 import {
   SignInButton,
   SignUpButton,
@@ -68,11 +69,26 @@ export default function HomePage() {
         </SignedIn>
       </motion.div>
 
+      {/* Target illustration */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="flex justify-center mb-6"
+      >
+        <motion.div
+          animate={{ rotate: [0, 1, -1, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <TargetIllustration />
+        </motion.div>
+      </motion.div>
+
       {/* Text Logo */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
         className="mb-12 text-center"
       >
         <h1 className="font-display text-7xl md:text-8xl tracking-widest leading-none">
@@ -127,6 +143,23 @@ export default function HomePage() {
               </Button>
             </SignInButton>
           </SignedOut>
+        </motion.div>
+
+        {/* Live Games - Public, no auth required */}
+        <motion.div variants={itemVariants}>
+          <Link href="/live" className="block">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation relative"
+            >
+              <span className="absolute left-4 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
+              ШУУД
+            </Button>
+          </Link>
         </motion.div>
 
         {/* History */}

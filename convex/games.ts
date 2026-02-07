@@ -178,3 +178,53 @@ export const listRecent = query({
       .take(limit);
   },
 });
+
+// Get all live (in-progress) games with summary data for the live page
+export const listLive = query({
+  args: {
+    playerCount: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    const games = await ctx.db
+      .query("games")
+      .withIndex("by_finished", (q) => q.eq("isFinished", false))
+      .order("desc")
+      .take(limit);
+
+    // Apply playerCount filter if specified
+    const filtered = args.playerCount
+      ? games.filter((g) => g.playerCount === args.playerCount)
+      : games;
+
+    // Return with computed summary data for efficient card rendering
+    return filtered.map((game) => ({
+      _id: game._id,
+      startedAt: game.startedAt,
+      playerCount: game.playerCount,
+      currentRound: game.currentRound,
+      currentPlayerIndex: game.currentPlayerIndex,
+      players: game.players.map((p) => ({
+        name: p.name,
+        score: p.shots.filter((s) => s === true).length,
+      })),
+      progressPercent: Math.round(
+        (game.players.reduce(
+          (sum, p) => sum + p.shots.filter((s) => s !== null).length,
+          0
+        ) /
+          (game.playerCount * 20)) *
+          100
+      ),
+    }));
+  },
+});
+
+// Get full game data for spectator view (public, allows both live and finished)
+export const getLive = query({
+  args: { id: v.id("games") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
