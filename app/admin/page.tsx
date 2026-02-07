@@ -20,7 +20,7 @@ export default function AdminPage() {
   // Get current user from Convex
   const currentUser = useQuery(
     api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    clerkUser?.id ? { clerkId: clerkUser.id } : "skip",
   );
 
   // Get all games
@@ -40,7 +40,12 @@ export default function AdminPage() {
   }, [isLoaded, clerkUser, router]);
 
   // Loading state
-  if (!isLoaded || currentUser === undefined || allGames === undefined || allUsers === undefined) {
+  if (
+    !isLoaded ||
+    currentUser === undefined ||
+    allGames === undefined ||
+    allUsers === undefined
+  ) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-muted-foreground">Ачааллаж байна…</div>
@@ -186,18 +191,16 @@ export default function AdminPage() {
                       ...p,
                       score: p.shots.filter((s) => s === true).length,
                     }));
-                    const maxScore = playersWithScores.length > 0
-                      ? Math.max(...playersWithScores.map((p) => p.score))
-                      : 0;
+                    const maxScore =
+                      playersWithScores.length > 0
+                        ? Math.max(...playersWithScores.map((p) => p.score))
+                        : 0;
                     const winner = playersWithScores.find(
-                      (p) => p.score === maxScore
+                      (p) => p.score === maxScore,
                     );
 
                     return (
-                      <div
-                        key={game._id}
-                        className="p-3 rounded-lg bg-black/5"
-                      >
+                      <div key={game._id} className="p-3 rounded-lg bg-black/5">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="w-4 h-4" />
@@ -232,7 +235,13 @@ export default function AdminPage() {
                           </div>
                         )}
                         <div className="mt-2">
-                          <Link href={game.isFinished ? `/s/${game._id}` : `/series/game/${game._id}`}>
+                          <Link
+                            href={
+                              game.isFinished
+                                ? `/s/${game._id}`
+                                : `/series/game/${game._id}`
+                            }
+                          >
                             <Button variant="outline" size="sm">
                               {game.isFinished ? "Харах" : "Үргэлжлүүлэх"}
                             </Button>
