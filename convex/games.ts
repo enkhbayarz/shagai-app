@@ -4,16 +4,24 @@ import { mutation, query } from "./_generated/server";
 // Create a new game
 export const create = mutation({
   args: {
+    creatorId: v.optional(v.id("users")),
     playerCount: v.number(),
-    playerNames: v.array(v.string()),
+    players: v.array(
+      v.object({
+        name: v.string(),
+        userId: v.optional(v.id("users")),
+      })
+    ),
   },
   handler: async (ctx, args) => {
-    const players = args.playerNames.map((name) => ({
-      name,
+    const players = args.players.map((player) => ({
+      name: player.name,
+      userId: player.userId,
       shots: Array(20).fill(null) as (boolean | null)[],
     }));
 
     const gameId = await ctx.db.insert("games", {
+      creatorId: args.creatorId,
       startedAt: Date.now(),
       playerCount: args.playerCount,
       players,
@@ -31,6 +39,18 @@ export const get = query({
   args: { id: v.id("games") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+// Get a game by ID for public share page (no auth required)
+export const getPublic = query({
+  args: { id: v.id("games") },
+  handler: async (ctx, args) => {
+    const game = await ctx.db.get(args.id);
+    if (!game || !game.isFinished) {
+      return null;
+    }
+    return game;
   },
 });
 
@@ -108,13 +128,52 @@ export const editShot = mutation({
   },
 });
 
-// Get recent games
+// Get recent games (for logged in user)
+export const listByCreator = query({
+  args: { creatorId: v.id("users"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+    return await ctx.db
+      .query("games")
+      .withIndex("by_creator", (q) => q.eq("creatorId", args.creatorId))
+      .order("desc")
+      .take(limit);
+  },
+});
+
+// Get games where user participated
+export const listByPlayer = query({
+  args: { userId: v.id("users"), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+    const allGames = await ctx.db.query("games").order("desc").take(100);
+
+    // Filter games where this user is a player
+    const userGames = allGames.filter((game) =>
+      game.players.some((player) => player.userId === args.userId)
+    );
+
+    return userGames.slice(0, limit);
+  },
+});
+
+// List all games (for admin)
+export const listAll = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    return await ctx.db.query("games").order("desc").take(limit);
+  },
+});
+
+// Get recent finished games
 export const listRecent = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 10;
     return await ctx.db
       .query("games")
+      .withIndex("by_finished", (q) => q.eq("isFinished", true))
       .order("desc")
       .take(limit);
   },

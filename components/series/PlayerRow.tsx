@@ -52,7 +52,23 @@ export function PlayerRow({
               )}
             />
           </div>
-          <span className="font-medium truncate max-w-[120px]">{name}</span>
+          <div className="flex flex-col">
+            <span className="font-medium truncate max-w-[120px]">{name}</span>
+            {/* Shot dots visualization - single row */}
+            <div className="flex gap-[2px] mt-1">
+              {shots.map((shot, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "w-[6px] h-[6px] rounded-full transition-colors",
+                    shot === true && "bg-emerald-500",
+                    shot === false && "bg-rose-500",
+                    shot === null && "bg-gray-300"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
         </div>
         <div className="font-score text-2xl font-bold tabular-nums">
           {score}

@@ -3,7 +3,13 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { TargetIllustration } from "@/components/home/TargetIllustration";
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 export default function HomePage() {
   const containerVariants = {
@@ -31,25 +37,51 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 py-12">
-      {/* Target Illustration */}
+      {/* Auth Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-4 right-4"
+      >
+        <SignedOut>
+          <div className="flex gap-2">
+            <SignInButton mode="modal">
+              <Button variant="outline" size="sm" className="touch-manipulation">
+                Нэвтрэх
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button size="sm" className="bg-black text-white hover:bg-black/90 touch-manipulation">
+                Бүртгүүлэх
+              </Button>
+            </SignUpButton>
+          </div>
+        </SignedOut>
+        <SignedIn>
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "w-10 h-10",
+              },
+            }}
+          />
+        </SignedIn>
+      </motion.div>
+
+      {/* Text Logo */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="mb-12"
+        className="mb-12 text-center"
       >
-        <TargetIllustration />
+        <h1 className="font-display text-7xl md:text-8xl tracking-widest leading-none">
+          ШАГАЙ
+        </h1>
+        <h1 className="font-display text-5xl md:text-6xl tracking-[0.3em] text-black/70">
+          ХАРВАА
+        </h1>
       </motion.div>
-
-      {/* Title */}
-      <motion.h1
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.5 }}
-        className="font-display text-4xl md:text-5xl text-center mb-12 tracking-wider"
-      >
-        ШАГАЙ ХАРВАА
-      </motion.h1>
 
       {/* Menu Buttons */}
       <motion.div
@@ -73,15 +105,54 @@ export default function HomePage() {
 
         {/* Series Shooting - Active */}
         <motion.div variants={itemVariants}>
-          <Link href="/series/setup" className="block">
-            <Button
-              variant="default"
-              size="lg"
-              className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
-            >
-              ЦУВАА ХАРВАА
-            </Button>
-          </Link>
+          <SignedIn>
+            <Link href="/series/setup" className="block">
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
+              >
+                ЦУВАА ХАРВАА
+              </Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
+              >
+                ЦУВАА ХАРВАА
+              </Button>
+            </SignInButton>
+          </SignedOut>
+        </motion.div>
+
+        {/* History */}
+        <motion.div variants={itemVariants}>
+          <SignedIn>
+            <Link href="/history" className="block">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                ТҮҮХ
+              </Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                ТҮҮХ
+              </Button>
+            </SignInButton>
+          </SignedOut>
         </motion.div>
 
         {/* Settings */}
@@ -105,7 +176,7 @@ export default function HomePage() {
         transition={{ delay: 1.5, duration: 0.5 }}
         className="mt-16 text-sm text-muted-foreground"
       >
-        v1.0
+        v2.0
       </motion.p>
     </div>
   );

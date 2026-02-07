@@ -1,49 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Play } from "lucide-react";
+import { ArrowLeft, User, Play, Search, Plus, X } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 
+interface PlayerEntry {
+  name: string;
+  userId?: Id<"users">;
+}
+
 export default function SetupPage() {
   const router = useRouter();
+  const { user: clerkUser } = useUser();
+
   const [playerCount, setPlayerCount] = useState(2);
-  const [playerNames, setPlayerNames] = useState<string[]>(["", "", "", ""]);
+  const [players, setPlayers] = useState<PlayerEntry[]>([
+    { name: "" },
+    { name: "" },
+    { name: "" },
+    { name: "" },
+  ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activePlayerIndex, setActivePlayerIndex] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Convex queries and mutations
+  const currentUser = useQuery(
+    api.users.getByClerkId,
+    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+  );
+  const searchResults = useQuery(
+    api.users.search,
+    searchQuery.length >= 2 ? { query: searchQuery } : "skip"
+  );
+  const createGame = useMutation(api.games.create);
+  const createUser = useMutation(api.users.createOrGetUser);
+
+  // Create user in Convex if doesn't exist (null means not found, undefined means loading)
+  useEffect(() => {
+    if (clerkUser && currentUser === null) {
+      createUser({
+        clerkId: clerkUser.id,
+        email: clerkUser.emailAddresses[0]?.emailAddress || "",
+        fullName: clerkUser.fullName || clerkUser.firstName || "User",
+        username: clerkUser.username || `user_${clerkUser.id.slice(-6)}`,
+      });
+    }
+  }, [clerkUser, currentUser, createUser]);
 
   const handlePlayerCountChange = (count: number) => {
     setPlayerCount(count);
   };
 
   const handleNameChange = (index: number, name: string) => {
-    const newNames = [...playerNames];
-    newNames[index] = name;
-    setPlayerNames(newNames);
+    const newPlayers = [...players];
+    newPlayers[index] = { name, userId: undefined };
+    setPlayers(newPlayers);
   };
 
-  const handleStart = () => {
-    // Create game data and store in sessionStorage for now
-    // Later this will be stored in Convex
-    const gameData = {
-      playerCount,
-      players: playerNames.slice(0, playerCount).map((name, i) => ({
-        name: name || `Тоглогч ${i + 1}`,
-        shots: Array(20).fill(null),
-      })),
-      currentRound: 1,
-      currentPlayerIndex: 0,
-      isFinished: false,
-      startedAt: Date.now(),
-    };
-
-    sessionStorage.setItem("shagai-game", JSON.stringify(gameData));
-    router.push("/series/game");
+  const handleSelectUser = (index: number, user: { _id: Id<"users">; fullName: string }) => {
+    const newPlayers = [...players];
+    newPlayers[index] = { name: user.fullName, userId: user._id };
+    setPlayers(newPlayers);
+    setActivePlayerIndex(null);
+    setSearchQuery("");
   };
 
-  const canStart = playerCount >= 1;
+  const handleClearUser = (index: number) => {
+    const newPlayers = [...players];
+    newPlayers[index] = { name: "", userId: undefined };
+    setPlayers(newPlayers);
+  };
+
+  const handleStart = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
+
+    try {
+      const gamePlayers = players.slice(0, playerCount).map((player, i) => ({
+        name: player.name || `Тоглогч ${i + 1}`,
+        userId: player.userId,
+      }));
+
+      const gameId = await createGame({
+        creatorId: currentUser?._id,
+        playerCount,
+        players: gamePlayers,
+      });
+
+      router.push(`/series/game/${gameId}`);
+    } catch (error) {
+      console.error("Failed to create game:", error);
+      setIsCreating(false);
+    }
+  };
+
+  const canStart = playerCount >= 1 && !isCreating;
 
   return (
     <div className="min-h-screen px-4 py-6">
@@ -114,20 +175,67 @@ export default function SetupPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * index }}
-                  className="flex items-center gap-3"
+                  className="space-y-2"
                 >
-                  <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-black/50" />
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      players[index].userId ? "bg-emerald-100" : "bg-black/10"
+                    }`}>
+                      <User className={`w-5 h-5 ${
+                        players[index].userId ? "text-emerald-600" : "text-black/50"
+                      }`} />
+                    </div>
+                    <div className="flex-1 relative">
+                      <Input
+                        placeholder={`Тоглогч ${index + 1}…`}
+                        value={players[index].name}
+                        onChange={(e) => {
+                          handleNameChange(index, e.target.value);
+                          setSearchQuery(e.target.value);
+                        }}
+                        onFocus={() => setActivePlayerIndex(index)}
+                        className="h-12 pr-10"
+                        autoComplete="off"
+                      />
+                      {players[index].userId && (
+                        <button
+                          onClick={() => handleClearUser(index)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <Input
-                    placeholder={`Тоглогч ${index + 1}…`}
-                    value={playerNames[index]}
-                    onChange={(e) => handleNameChange(index, e.target.value)}
-                    className="h-12 flex-1"
-                    autoComplete="off"
-                  />
+
+                  {/* Search Results Dropdown */}
+                  {activePlayerIndex === index && searchResults && searchResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="ml-13 bg-white rounded-lg border shadow-lg overflow-hidden"
+                    >
+                      {searchResults.slice(0, 5).map((user) => (
+                        <button
+                          key={user._id}
+                          onClick={() => handleSelectUser(index, user)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b last:border-b-0"
+                        >
+                          <User className="w-4 h-4 text-gray-400" />
+                          <div>
+                            <div className="font-medium">{user.fullName}</div>
+                            <div className="text-sm text-gray-500">@{user.username}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
                 </motion.div>
               ))}
+
+              <p className="text-xs text-muted-foreground mt-2">
+                Бүртгэлтэй хэрэглэгч олохын тулд нэр бичнэ үү
+              </p>
             </CardContent>
           </Card>
         </motion.div>
@@ -143,8 +251,14 @@ export default function SetupPage() {
             disabled={!canStart}
             className="w-full h-14 text-lg font-bold gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
           >
-            <Play className="w-5 h-5" />
-            ЭХЛЭХ
+            {isCreating ? (
+              "Үүсгэж байна…"
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                ЭХЛЭХ
+              </>
+            )}
           </Button>
         </motion.div>
       </div>

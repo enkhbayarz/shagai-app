@@ -23,7 +23,7 @@ export function ShotCircle({ state, isActive, onClick, size = "md" }: ShotCircle
     state === false && "bg-[#f43f5e] text-white", // Miss - rose-500
     state === null && "bg-[rgba(0,0,0,0.08)] border border-[#d4d4d8]", // Not shot - light gray
     isActive && state === null && "ring-2 ring-[#f59e0b] ring-offset-2 ring-offset-white",
-    onClick && "cursor-pointer hover:opacity-80",
+    onClick && "cursor-pointer hover:scale-110 hover:ring-2 hover:ring-black/20",
     !onClick && "cursor-default"
   );
 
