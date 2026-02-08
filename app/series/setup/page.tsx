@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Play, Search, Plus, X } from "lucide-react";
+import { ArrowLeft, User, Play, X } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -12,6 +12,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScoutingCard } from "@/components/series/ScoutingCard";
 
 interface PlayerEntry {
   name: string;
@@ -229,6 +230,14 @@ export default function SetupPage() {
                         </button>
                       ))}
                     </motion.div>
+                  )}
+
+                  {/* Scouting card for selected registered user */}
+                  {players[index].userId && (
+                    <ScoutingCard
+                      userId={players[index].userId!}
+                      currentUserId={currentUser?._id}
+                    />
                   )}
                 </motion.div>
               ))}

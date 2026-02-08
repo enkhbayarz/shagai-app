@@ -99,7 +99,8 @@ export default defineSchema({
     timestamp: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_timestamp", ["userId", "timestamp"]),
+    .index("by_user_timestamp", ["userId", "timestamp"])
+    .index("by_user_game", ["userId", "gameId"]),
 
   // Achievements - unlocked milestone badges
   achievements: defineTable({

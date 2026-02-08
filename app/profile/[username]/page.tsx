@@ -5,12 +5,16 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, UserX } from "lucide-react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { StatsGrid } from "@/components/profile/StatsGrid";
+import { AccuracyBreakdown } from "@/components/profile/AccuracyBreakdown";
+import { HeadToHead } from "@/components/profile/HeadToHead";
 import { RatingChart } from "@/components/profile/RatingChart";
 import { AchievementGrid } from "@/components/profile/AchievementGrid";
 import { RecentGamesList } from "@/components/profile/RecentGamesList";
@@ -18,8 +22,15 @@ import { RecentGamesList } from "@/components/profile/RecentGamesList";
 export default function ProfilePage() {
   const params = useParams();
   const username = params.username as string;
+  const { user: clerkUser } = useUser();
 
   const profile = useQuery(api.profiles.getProfile, { username });
+
+  const currentUser = useQuery(
+    api.users.getByClerkId,
+    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+  );
+  const currentUserId = currentUser?._id as Id<"users"> | undefined;
 
   const userId = profile?.user?._id as Id<"users"> | undefined;
 
@@ -30,6 +41,11 @@ export default function ProfilePage() {
 
   const recentGames = useQuery(
     api.profiles.getRecentGames,
+    userId ? { userId } : "skip"
+  );
+
+  const accuracyData = useQuery(
+    api.profiles.getAccuracyBreakdown,
     userId ? { userId } : "skip"
   );
 
@@ -144,6 +160,22 @@ export default function ProfilePage() {
           <div className="text-center py-4 text-muted-foreground text-sm">
             Тоглоом тоглоогүй байна
           </div>
+        )}
+
+        {/* Accuracy breakdown */}
+        {accuracyData === undefined ? (
+          <Card className="glass">
+            <CardContent className="p-4">
+              <div className="h-32 animate-pulse bg-gray-100 rounded" />
+            </CardContent>
+          </Card>
+        ) : (
+          <AccuracyBreakdown quarters={accuracyData} />
+        )}
+
+        {/* Head-to-head */}
+        {userId && (
+          <HeadToHead userId={userId} currentUserId={currentUserId} />
         )}
 
         {/* Rating chart */}

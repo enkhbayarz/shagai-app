@@ -13,10 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ShareCard } from "./ShareCard";
+import { PostMatchAnalysis } from "./PostMatchAnalysis";
 import html2canvas from "html2canvas";
 
 interface Player {
   name: string;
+  userId?: string;
   shots: (boolean | null)[];
 }
 
@@ -43,7 +45,9 @@ export function FinishedModal({
     score: player.shots.filter((s) => s === true).length,
   }));
 
-  const maxScore = Math.max(...playersWithScores.map((p) => p.score));
+  const maxScore = playersWithScores.length > 0
+    ? Math.max(...playersWithScores.map((p) => p.score))
+    : 0;
   const winners = playersWithScores.filter((p) => p.score === maxScore);
 
   const formattedDate = new Date().toLocaleDateString("mn-MN", {
@@ -124,7 +128,7 @@ export function FinishedModal({
 
   return (
     <Dialog open={open}>
-      <DialogContent className="max-w-sm glass" showCloseButton={false}>
+      <DialogContent className="max-w-sm glass max-h-[85vh] overflow-y-auto" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2 text-2xl">
             <Trophy className="w-6 h-6 text-amber-500" />
@@ -141,7 +145,7 @@ export function FinishedModal({
             .sort((a, b) => b.score - a.score)
             .map((player, index) => (
               <motion.div
-                key={index}
+                key={player.name}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -179,7 +183,7 @@ export function FinishedModal({
                   </div>
                 </div>
                 <span className="font-score text-xl font-bold">
-                  {player.score}/20
+                  {player.score}/{player.shots.filter((s) => s !== null).length || player.shots.length}
                 </span>
               </motion.div>
             ))}
@@ -196,6 +200,9 @@ export function FinishedModal({
             🏆 Түрүүлсэн: {winners.map((w) => w.name).join(", ")}
           </p>
         )}
+
+        {/* Post-match analysis */}
+        <PostMatchAnalysis players={players} gameId={gameId} />
 
         {/* Actions */}
         <div className="flex flex-col gap-2">
