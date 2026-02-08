@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Link2, Home, Check } from "lucide-react";
+import { Trophy, Link2, Home, Check, Share2, Loader2, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ShareCard } from "./ShareCard";
+import html2canvas from "html2canvas";
 
 interface Player {
   name: string;
@@ -32,6 +34,8 @@ export function FinishedModal({
   onGoHome,
 }: FinishedModalProps) {
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   // Calculate scores and find winner
   const playersWithScores = players.map((player) => ({
@@ -41,6 +45,14 @@ export function FinishedModal({
 
   const maxScore = Math.max(...playersWithScores.map((p) => p.score));
   const winners = playersWithScores.filter((p) => p.score === maxScore);
+
+  const formattedDate = new Date().toLocaleDateString("mn-MN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const handleCopyLink = async () => {
     if (!gameId) return;
@@ -54,6 +66,61 @@ export function FinishedModal({
       console.error("Failed to copy:", err);
     }
   };
+
+  const handleShare = useCallback(async () => {
+    if (!shareCardRef.current || sharing) return;
+    setSharing(true);
+
+    try {
+      const canvas = await html2canvas(shareCardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+
+      if (!blob) {
+        console.error("Failed to create image blob");
+        return;
+      }
+
+      const file = new File([blob], "shagai-result.png", { type: "image/png" });
+
+      // Use native share if available (mobile), otherwise download
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Шагай Харваа - Үр дүн",
+          text: gameId
+            ? `${window.location.origin}/s/${gameId}`
+            : undefined,
+        });
+      } else {
+        // Fallback: download the image
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "shagai-result.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      // User cancelled share — not an error
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Share failed:", err);
+    } finally {
+      setSharing(false);
+    }
+  }, [sharing, gameId]);
+
+  // Check if native share with files is likely supported (share + canShare APIs)
+  const canNativeShare =
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function";
 
   return (
     <Dialog open={open}>
@@ -132,6 +199,30 @@ export function FinishedModal({
 
         {/* Actions */}
         <div className="flex flex-col gap-2">
+          {/* Share image button */}
+          <Button
+            onClick={handleShare}
+            disabled={sharing}
+            className="w-full h-12 gap-2 bg-amber-500 text-black hover:bg-amber-400 touch-manipulation font-medium"
+          >
+            {sharing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Зураг бэлдэж байна...
+              </>
+            ) : canNativeShare ? (
+              <>
+                <Share2 className="w-4 h-4" />
+                Хуваалцах
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Зураг татах
+              </>
+            )}
+          </Button>
+
           {gameId && (
             <Button
               onClick={handleCopyLink}
@@ -158,6 +249,19 @@ export function FinishedModal({
             <Home className="w-4 h-4" />
             Нүүр хуудас
           </Button>
+        </div>
+
+        {/* Hidden ShareCard for html2canvas capture */}
+        <div
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            top: 0,
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        >
+          <ShareCard ref={shareCardRef} players={players} date={formattedDate} />
         </div>
       </DialogContent>
     </Dialog>

@@ -61,6 +61,35 @@ export default defineSchema({
     .index("by_invitee_status", ["inviteeId", "status"])
     .index("by_clan", ["clanId"]),
 
+  // Player stats table - precomputed stats per player (updated on game finish)
+  playerStats: defineTable({
+    userId: v.id("users"),
+    totalGames: v.number(),
+    totalWins: v.number(),
+    totalHits: v.number(),
+    totalShots: v.number(), // totalGames * 20
+    avgAccuracy: v.number(), // totalHits / totalShots (0-1)
+    currentStreak: v.number(), // current win streak (negative = loss streak)
+    bestStreak: v.number(), // best win streak ever
+    last10Results: v.array(v.boolean()), // last 10 W/L results, newest first
+    rating: v.number(), // ELO rating (starts at 1500)
+    ratingDeviation: v.number(), // Glicko-2 RD (starts at 350)
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_rating", ["rating"])
+    .index("by_totalHits", ["totalHits"]),
+
+  // Game participants join table - links users to games they played in
+  gameParticipants: defineTable({
+    gameId: v.id("games"),
+    userId: v.id("users"),
+    score: v.number(), // total hits in that game
+    rank: v.number(), // 1 = winner, 2 = second, etc. (ties share same rank)
+  })
+    .index("by_user", ["userId"])
+    .index("by_game", ["gameId"]),
+
   // Games table - stores game sessions
   games: defineTable({
     creatorId: v.optional(v.id("users")), // Who created the game
@@ -77,6 +106,16 @@ export default defineSchema({
     currentRound: v.number(), // 1-20
     currentPlayerIndex: v.number(), // 0 to playerCount-1
     isFinished: v.boolean(),
+    result: v.optional(
+      v.array(
+        v.object({
+          userId: v.optional(v.id("users")),
+          name: v.string(),
+          score: v.number(),
+          rank: v.number(),
+        })
+      )
+    ),
   })
     .index("by_creator", ["creatorId"])
     .index("by_finished", ["isFinished"]),

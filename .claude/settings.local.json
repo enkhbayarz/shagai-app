@@ -5,7 +5,10 @@
       "Bash(bun run build:*)",
       "Bash(bun run lint:*)",
       "Bash(bunx convex codegen:*)",
-      "WebFetch(domain:ui.shadcn.com)"
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
     ]
   }
 }

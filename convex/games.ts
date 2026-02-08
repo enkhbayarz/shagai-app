@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 // Create a new game
 export const create = mutation({
@@ -95,6 +96,13 @@ export const recordShot = mutation({
       isFinished,
       ...(isFinished && { finishedAt: Date.now() }),
     });
+
+    // Update player stats when game finishes
+    if (isFinished) {
+      await ctx.scheduler.runAfter(0, internal.stats.updateStatsOnGameFinish, {
+        gameId: args.gameId,
+      });
+    }
 
     return { isFinished };
   },

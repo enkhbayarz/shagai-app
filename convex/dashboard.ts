@@ -1,46 +1,18 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
-// Get top players ranked by total hits across all finished games
+// Get top players ranked by total hits — reads from precomputed playerStats table
 export const getLeaderboard = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
 
-    // Fetch recent finished games (bounded for performance)
-    const finishedGames = await ctx.db
-      .query("games")
-      .withIndex("by_finished", (q) => q.eq("isFinished", true))
+    // Read from precomputed playerStats, sorted by totalHits via index
+    const top = await ctx.db
+      .query("playerStats")
+      .withIndex("by_totalHits")
       .order("desc")
-      .take(2000);
-
-    // Aggregate stats per registered user
-    const playerStats = new Map<
-      string,
-      { userId: Id<"users">; totalHits: number; totalGames: number }
-    >();
-
-    for (const game of finishedGames) {
-      for (const player of game.players) {
-        if (!player.userId) continue;
-        const id = player.userId;
-        const hits = player.shots.filter((s) => s === true).length;
-        const existing = playerStats.get(id);
-        if (existing) {
-          existing.totalHits += hits;
-          existing.totalGames += 1;
-        } else {
-          playerStats.set(id, { userId: id, totalHits: hits, totalGames: 1 });
-        }
-      }
-    }
-
-    // Sort by total hits descending
-    const sorted = Array.from(playerStats.values()).sort(
-      (a, b) => b.totalHits - a.totalHits
-    );
-    const top = sorted.slice(0, limit);
+      .take(limit);
 
     // Enrich with user info
     const results = await Promise.all(
