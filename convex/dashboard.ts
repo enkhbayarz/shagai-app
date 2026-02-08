@@ -29,6 +29,7 @@ export const getLeaderboard = query({
             entry.totalGames > 0
               ? Math.round((entry.totalHits / entry.totalGames) * 10) / 10
               : 0,
+          rating: entry.rating,
         };
       })
     );

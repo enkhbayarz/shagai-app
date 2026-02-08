@@ -8,7 +8,8 @@
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(find:*)",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(bun add:*)"
     ]
   }
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Trophy, Target, User } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { TierBadge } from "@/components/shared/TierBadge";
 
 interface PlayerEntry {
   rank: number;
@@ -11,6 +13,7 @@ interface PlayerEntry {
   totalHits: number;
   totalGames: number;
   avgScore: number;
+  rating: number;
 }
 
 interface TopPlayersCardProps {
@@ -91,7 +94,10 @@ export function TopPlayersCard({
                 >
                   {player.rank}
                 </span>
-                <div className="flex-1 min-w-0">
+                <Link
+                  href={`/profile/${player.username}`}
+                  className="flex-1 min-w-0"
+                >
                   <div className="flex items-center gap-2">
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -107,15 +113,18 @@ export function TopPlayersCard({
                       />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {player.fullName}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium truncate">
+                          {player.fullName}
+                        </span>
+                        <TierBadge rating={player.rating} size="sm" />
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
                         @{player.username}
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
                 <span className="w-16 text-right font-score text-sm font-bold tabular-nums">
                   {player.totalHits}
                 </span>

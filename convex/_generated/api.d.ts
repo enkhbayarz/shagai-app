@@ -12,6 +12,7 @@ import type * as backfill from "../backfill.js";
 import type * as clans from "../clans.js";
 import type * as dashboard from "../dashboard.js";
 import type * as games from "../games.js";
+import type * as profiles from "../profiles.js";
 import type * as settings from "../settings.js";
 import type * as stats from "../stats.js";
 import type * as users from "../users.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   clans: typeof clans;
   dashboard: typeof dashboard;
   games: typeof games;
+  profiles: typeof profiles;
   settings: typeof settings;
   stats: typeof stats;
   users: typeof users;

@@ -56,6 +56,50 @@ function computeEloChanges(
   return changes;
 }
 
+// Check and award achievements for a player after stats update
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function checkAchievements(
+  ctx: any,
+  userId: Id<"users">,
+  stats: {
+    totalGames: number;
+    totalWins: number;
+    totalHits: number;
+    currentStreak: number;
+    bestStreak: number;
+  },
+  gameScore: number,
+  gameTotalShots: number
+) {
+  const checks = [
+    { code: "first_game", condition: stats.totalGames >= 1 },
+    { code: "first_win", condition: stats.totalWins >= 1 },
+    { code: "perfect_game", condition: gameTotalShots > 0 && gameScore === gameTotalShots },
+    { code: "sharpshooter", condition: gameTotalShots > 0 && gameScore / gameTotalShots >= 0.8 },
+    { code: "on_fire", condition: stats.currentStreak >= 5 || stats.bestStreak >= 5 },
+    { code: "streak_10", condition: stats.currentStreak >= 10 || stats.bestStreak >= 10 },
+    { code: "hundred_battles", condition: stats.totalGames >= 100 },
+    { code: "thousander", condition: stats.totalHits >= 1000 },
+  ];
+
+  for (const check of checks) {
+    if (!check.condition) continue;
+    const existing = await ctx.db
+      .query("achievements")
+      .withIndex("by_user_code", (q: any) =>
+        q.eq("userId", userId).eq("achievementCode", check.code)
+      )
+      .unique();
+    if (!existing) {
+      await ctx.db.insert("achievements", {
+        userId,
+        achievementCode: check.code,
+        unlockedAt: Date.now(),
+      });
+    }
+  }
+}
+
 // Called when a game finishes. Updates playerStats, gameParticipants, and game result.
 export const updateStatsOnGameFinish = internalMutation({
   args: { gameId: v.id("games") },
@@ -168,6 +212,15 @@ export const updateStatsOnGameFinish = internalMutation({
 
       const existing = player.existingStats;
 
+      let finalRating: number;
+      let updatedStats: {
+        totalGames: number;
+        totalWins: number;
+        totalHits: number;
+        currentStreak: number;
+        bestStreak: number;
+      };
+
       if (existing) {
         // Update existing stats
         const newStreak = isWin
@@ -192,6 +245,15 @@ export const updateStatsOnGameFinish = internalMutation({
           ratingDeviation: Math.max(50, existing.ratingDeviation - 5),
           updatedAt: Date.now(),
         });
+
+        finalRating = newRating;
+        updatedStats = {
+          totalGames: existing.totalGames + 1,
+          totalWins: existing.totalWins + (isWin ? 1 : 0),
+          totalHits: newTotalHits,
+          currentStreak: newStreak,
+          bestStreak: Math.max(existing.bestStreak, newStreak),
+        };
       } else {
         // Create new stats entry with initial rating + change
         const initialRating = Math.max(0, DEFAULT_RATING + ratingChange);
@@ -210,7 +272,34 @@ export const updateStatsOnGameFinish = internalMutation({
           ratingDeviation: DEFAULT_RD - 5,
           updatedAt: Date.now(),
         });
+
+        finalRating = initialRating;
+        updatedStats = {
+          totalGames: 1,
+          totalWins: isWin ? 1 : 0,
+          totalHits: player.score,
+          currentStreak: isWin ? 1 : -1,
+          bestStreak: isWin ? 1 : 0,
+        };
       }
+
+      // 7. Record rating snapshot for history chart
+      await ctx.db.insert("ratingSnapshots", {
+        userId: player.userId,
+        gameId: args.gameId,
+        rating: finalRating,
+        ratingChange,
+        timestamp: Date.now(),
+      });
+
+      // 8. Check and award achievements
+      await checkAchievements(
+        ctx,
+        player.userId,
+        updatedStats,
+        player.score,
+        player.totalShots
+      );
     }
   },
 });

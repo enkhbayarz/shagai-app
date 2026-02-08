@@ -90,6 +90,26 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_game", ["gameId"]),
 
+  // Rating snapshots - one per player per game, for rating history chart
+  ratingSnapshots: defineTable({
+    userId: v.id("users"),
+    gameId: v.id("games"),
+    rating: v.number(), // rating after this game
+    ratingChange: v.number(), // +/- change from this game
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_timestamp", ["userId", "timestamp"]),
+
+  // Achievements - unlocked milestone badges
+  achievements: defineTable({
+    userId: v.id("users"),
+    achievementCode: v.string(),
+    unlockedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_code", ["userId", "achievementCode"]),
+
   // Games table - stores game sessions
   games: defineTable({
     creatorId: v.optional(v.id("users")), // Who created the game

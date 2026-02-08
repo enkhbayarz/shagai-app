@@ -10,9 +10,18 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
+  useUser,
 } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function HomePage() {
+  const { user: clerkUser } = useUser();
+  const currentUser = useQuery(
+    api.users.getByClerkId,
+    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+  );
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -196,6 +205,35 @@ export default function HomePage() {
                 className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
               >
                 КЛАН
+              </Button>
+            </SignInButton>
+          </SignedOut>
+        </motion.div>
+
+        {/* Profile */}
+        <motion.div variants={itemVariants}>
+          <SignedIn>
+            <Link
+              href={currentUser?.username ? `/profile/${currentUser.username}` : "#"}
+              className="block"
+            >
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                ПРОФАЙЛ
+              </Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                ПРОФАЙЛ
               </Button>
             </SignInButton>
           </SignedOut>
