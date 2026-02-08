@@ -12,6 +12,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function JoinClanPage() {
   const params = useParams();
@@ -62,8 +63,13 @@ export default function JoinClanPage() {
   // Loading
   if (!isLoaded || clan === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Ачааллаж байна...</div>
+      <div className="flex flex-col items-center justify-center min-h-screen px-6">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <Skeleton className="w-20 h-20 rounded-2xl mx-auto" />
+          <Skeleton className="h-8 w-40 mx-auto" />
+          <Skeleton className="h-5 w-28 mx-auto" />
+          <Skeleton className="h-12 w-full rounded-md" />
+        </div>
       </div>
     );
   }

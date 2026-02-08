@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { PlayerRow } from "@/components/series/PlayerRow";
 import { GameControls } from "@/components/series/GameControls";
 import { FinishedModal } from "@/components/series/FinishedModal";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GamePage() {
   const params = useParams();
@@ -61,8 +62,18 @@ export default function GamePage() {
   // Loading state
   if (game === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Ачааллаж байна…</div>
+      <div className="min-h-screen px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+        <div className="max-w-md mx-auto space-y-4">
+          {[...Array(2)].map((_, i) => (
+            <Skeleton key={i} className="h-36 rounded-xl" />
+          ))}
+          <Skeleton className="h-16 rounded-xl" />
+        </div>
       </div>
     );
   }

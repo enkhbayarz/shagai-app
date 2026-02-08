@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { RosterTable } from "@/components/clans/RosterTable";
 import { ClanMatchCard } from "@/components/clans/ClanMatchCard";
 import { InviteDialog } from "@/components/clans/InviteDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ClanDetailPage() {
   const params = useParams();
@@ -109,8 +110,21 @@ export default function ClanDetailPage() {
   // Loading
   if (clan === undefined || members === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Ачааллаж байна...</div>
+      <div className="min-h-screen px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-24" />
+          <div className="w-20" />
+        </div>
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Skeleton className="h-40 rounded-xl" />
+          <div className="grid grid-cols-3 gap-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
       </div>
     );
   }

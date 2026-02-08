@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Шагай Харваа",
@@ -38,6 +39,7 @@ export default function RootLayout({
             <main className="relative min-h-screen noise">
               {children}
             </main>
+            <Toaster />
           </ConvexClientProvider>
         </body>
       </html>
