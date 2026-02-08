@@ -18,7 +18,6 @@ interface InviteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clanId: Id<"clans">;
-  inviterId: Id<"users">;
   inviteCode: string;
 }
 
@@ -26,7 +25,6 @@ export function InviteDialog({
   open,
   onOpenChange,
   clanId,
-  inviterId,
   inviteCode,
 }: InviteDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,14 +48,14 @@ export function InviteDialog({
     setInviteError("");
     setInvitingUserId(userId);
     try {
-      await inviteMutation({ clanId, inviterId, inviteeId: userId });
+      await inviteMutation({ clanId, inviteeId: userId });
       setSentTo((prev) => new Set(prev).add(userId));
     } catch (error: any) {
       setInviteError(error.message || "Урилга илгээхэд алдаа гарлаа");
     } finally {
       setInvitingUserId(null);
     }
-  }, [invitingUserId, inviteMutation, clanId, inviterId]);
+  }, [invitingUserId, inviteMutation, clanId]);
 
   const handleCopyLink = useCallback(async () => {
     const url = `${window.location.origin}/clans/join/${inviteCode}`;

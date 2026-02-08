@@ -19,14 +19,14 @@ export default function HistoryPage() {
 
   // Get current user from Convex
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
 
   // Get games created by this user
   const createdGames = useQuery(
     api.games.listByCreator,
-    currentUser?._id ? { creatorId: currentUser._id } : "skip"
+    currentUser ? {} : "skip"
   );
 
   // Redirect if not logged in

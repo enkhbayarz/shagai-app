@@ -37,8 +37,8 @@ export default function ClanDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
 
   const clan = useQuery(api.clans.get, clanId ? { id: clanId } : "skip");
@@ -64,7 +64,7 @@ export default function ClanDetailPage() {
   const handleLeave = async () => {
     if (!currentUser?._id || !clanId) return;
     try {
-      await leaveClan({ clanId, userId: currentUser._id });
+      await leaveClan({ clanId });
       router.push("/clans");
     } catch (error) {
       console.error("Failed to leave:", error);
@@ -76,7 +76,6 @@ export default function ClanDetailPage() {
     try {
       await kickMember({
         clanId,
-        leaderId: currentUser._id,
         targetUserId: targetUserId as Id<"users">,
       });
     } catch (error) {
@@ -87,7 +86,7 @@ export default function ClanDetailPage() {
   const handleDelete = async () => {
     if (!currentUser?._id || !clanId) return;
     try {
-      await deleteClan({ clanId, userId: currentUser._id });
+      await deleteClan({ clanId });
       router.push("/clans");
     } catch (error) {
       console.error("Failed to delete:", error);
@@ -400,12 +399,11 @@ export default function ClanDetailPage() {
       </div>
 
       {/* Invite Dialog */}
-      {isLeader && currentUser && (
+      {isLeader && currentUser && clan.inviteCode && (
         <InviteDialog
           open={inviteDialogOpen}
           onOpenChange={setInviteDialogOpen}
           clanId={clanId}
-          inviterId={currentUser._id}
           inviteCode={clan.inviteCode}
         />
       )}

@@ -1,11 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAuthUser, getOptionalAuthUser } from "./auth";
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
   let code = "";
   for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[bytes[i] % chars.length];
   }
   return code;
 }
@@ -16,9 +19,10 @@ export const create = mutation({
     name: v.string(),
     tag: v.string(),
     description: v.optional(v.string()),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     // Validate tag
     if (args.tag.length < 2 || args.tag.length > 6) {
       throw new Error("Tag must be 2-6 characters");
@@ -55,7 +59,7 @@ export const create = mutation({
       name: args.name,
       tag: args.tag,
       description: args.description,
-      creatorId: args.userId,
+      creatorId: user._id,
       createdAt: Date.now(),
       inviteCode,
     });
@@ -63,7 +67,7 @@ export const create = mutation({
     // Add creator as leader
     await ctx.db.insert("clanMembers", {
       clanId,
-      userId: args.userId,
+      userId: user._id,
       role: "leader",
       joinedAt: Date.now(),
     });
@@ -76,15 +80,16 @@ export const create = mutation({
 export const invite = mutation({
   args: {
     clanId: v.id("clans"),
-    inviterId: v.id("users"),
     inviteeId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     // Verify inviter is a member
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.inviterId)
+        q.eq("clanId", args.clanId).eq("userId", user._id)
       )
       .first();
     if (!membership) {
@@ -128,7 +133,7 @@ export const invite = mutation({
 
     return await ctx.db.insert("clanInvites", {
       clanId: args.clanId,
-      inviterId: args.inviterId,
+      inviterId: user._id,
       inviteeId: args.inviteeId,
       status: "pending",
       createdAt: Date.now(),
@@ -140,11 +145,12 @@ export const invite = mutation({
 export const acceptInvite = mutation({
   args: {
     inviteId: v.id("clanInvites"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const invite = await ctx.db.get(args.inviteId);
-    if (!invite || invite.inviteeId !== args.userId || invite.status !== "pending") {
+    if (!invite || invite.inviteeId !== user._id || invite.status !== "pending") {
       throw new Error("Invalid invite");
     }
 
@@ -161,7 +167,7 @@ export const acceptInvite = mutation({
     const existing = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", invite.clanId).eq("userId", args.userId)
+        q.eq("clanId", invite.clanId).eq("userId", user._id)
       )
       .first();
     if (existing) {
@@ -171,7 +177,7 @@ export const acceptInvite = mutation({
 
     await ctx.db.insert("clanMembers", {
       clanId: invite.clanId,
-      userId: args.userId,
+      userId: user._id,
       role: "member",
       joinedAt: Date.now(),
     });
@@ -184,11 +190,12 @@ export const acceptInvite = mutation({
 export const declineInvite = mutation({
   args: {
     inviteId: v.id("clanInvites"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const invite = await ctx.db.get(args.inviteId);
-    if (!invite || invite.inviteeId !== args.userId || invite.status !== "pending") {
+    if (!invite || invite.inviteeId !== user._id || invite.status !== "pending") {
       throw new Error("Invalid invite");
     }
     await ctx.db.patch(args.inviteId, { status: "declined" });
@@ -199,13 +206,14 @@ export const declineInvite = mutation({
 export const leave = mutation({
   args: {
     clanId: v.id("clans"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.userId)
+        q.eq("clanId", args.clanId).eq("userId", user._id)
       )
       .first();
     if (!membership) {
@@ -218,11 +226,10 @@ export const leave = mutation({
         .query("clanMembers")
         .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
         .collect();
-      const others = allMembers.filter((m) => m.userId !== args.userId);
+      const others = allMembers.filter((m) => m.userId !== user._id);
 
       if (others.length === 0) {
         // No other members - delete the clan
-        // Delete all invites
         const invites = await ctx.db
           .query("clanInvites")
           .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
@@ -238,7 +245,6 @@ export const leave = mutation({
       // Transfer leadership to oldest member
       const oldest = others.sort((a, b) => a.joinedAt - b.joinedAt)[0];
       await ctx.db.patch(oldest._id, { role: "leader" });
-      // Update clan creator
       await ctx.db.patch(args.clanId, { creatorId: oldest.userId });
     }
 
@@ -250,15 +256,16 @@ export const leave = mutation({
 export const kick = mutation({
   args: {
     clanId: v.id("clans"),
-    leaderId: v.id("users"),
     targetUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     // Verify leader
     const leaderMembership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.leaderId)
+        q.eq("clanId", args.clanId).eq("userId", user._id)
       )
       .first();
     if (!leaderMembership || leaderMembership.role !== "leader") {
@@ -283,15 +290,16 @@ export const kick = mutation({
   },
 });
 
-// Delete a clan (leader only)
+// Delete a clan (creator only)
 export const deleteClan = mutation({
   args: {
     clanId: v.id("clans"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const clan = await ctx.db.get(args.clanId);
-    if (!clan || clan.creatorId !== args.userId) {
+    if (!clan || clan.creatorId !== user._id) {
       throw new Error("Only the creator can delete the clan");
     }
 
@@ -317,17 +325,18 @@ export const deleteClan = mutation({
   },
 });
 
-// Regenerate invite code
+// Regenerate invite code (leader only)
 export const regenerateInviteCode = mutation({
   args: {
     clanId: v.id("clans"),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.userId)
+        q.eq("clanId", args.clanId).eq("userId", user._id)
       )
       .first();
     if (!membership || membership.role !== "leader") {
@@ -360,9 +369,10 @@ export const regenerateInviteCode = mutation({
 export const joinByCode = mutation({
   args: {
     inviteCode: v.string(),
-    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
     const clan = await ctx.db
       .query("clans")
       .withIndex("by_invite_code", (q) => q.eq("inviteCode", args.inviteCode))
@@ -375,7 +385,7 @@ export const joinByCode = mutation({
     const existing = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", clan._id).eq("userId", args.userId)
+        q.eq("clanId", clan._id).eq("userId", user._id)
       )
       .first();
     if (existing) {
@@ -393,7 +403,7 @@ export const joinByCode = mutation({
 
     await ctx.db.insert("clanMembers", {
       clanId: clan._id,
-      userId: args.userId,
+      userId: user._id,
       role: "member",
       joinedAt: Date.now(),
     });
@@ -402,7 +412,7 @@ export const joinByCode = mutation({
   },
 });
 
-// List all clans with member counts
+// List all clans with member counts (public, strips inviteCode)
 export const list = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
@@ -417,7 +427,13 @@ export const list = query({
           .collect();
         const creator = await ctx.db.get(clan.creatorId);
         return {
-          ...clan,
+          _id: clan._id,
+          _creationTime: clan._creationTime,
+          name: clan.name,
+          tag: clan.tag,
+          description: clan.description,
+          creatorId: clan.creatorId,
+          createdAt: clan.createdAt,
           memberCount: members.length,
           creatorName: creator?.username ?? "unknown",
         };
@@ -428,7 +444,7 @@ export const list = query({
   },
 });
 
-// Get a single clan with details
+// Get a single clan with details (inviteCode only for members)
 export const get = query({
   args: { id: v.id("clans") },
   handler: async (ctx, args) => {
@@ -441,15 +457,28 @@ export const get = query({
       .collect();
     const creator = await ctx.db.get(clan.creatorId);
 
+    // Only include inviteCode if the requester is a clan member
+    const user = await getOptionalAuthUser(ctx);
+    const isMember = user
+      ? members.some((m) => m.userId === user._id)
+      : false;
+
     return {
-      ...clan,
+      _id: clan._id,
+      _creationTime: clan._creationTime,
+      name: clan.name,
+      tag: clan.tag,
+      description: clan.description,
+      creatorId: clan.creatorId,
+      createdAt: clan.createdAt,
       memberCount: members.length,
       creatorName: creator?.username ?? "unknown",
+      ...(isMember && { inviteCode: clan.inviteCode }),
     };
   },
 });
 
-// Get clan by invite code
+// Get clan by invite code (public, strips inviteCode)
 export const getByInviteCode = query({
   args: { inviteCode: v.string() },
   handler: async (ctx, args) => {
@@ -465,7 +494,12 @@ export const getByInviteCode = query({
       .collect();
 
     return {
-      ...clan,
+      _id: clan._id,
+      _creationTime: clan._creationTime,
+      name: clan.name,
+      tag: clan.tag,
+      description: clan.description,
+      createdAt: clan.createdAt,
       memberCount: members.length,
     };
   },
@@ -558,13 +592,15 @@ export const getMemberStats = query({
   },
 });
 
-// Get clans the current user belongs to
+// Get clans the current user belongs to (auth required, strips inviteCode)
 export const myClans = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+
     const memberships = await ctx.db
       .query("clanMembers")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const results = await Promise.all(
@@ -576,7 +612,13 @@ export const myClans = query({
           .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
           .collect();
         return {
-          ...clan,
+          _id: clan._id,
+          _creationTime: clan._creationTime,
+          name: clan.name,
+          tag: clan.tag,
+          description: clan.description,
+          creatorId: clan.creatorId,
+          createdAt: clan.createdAt,
           memberCount: members.length,
           myRole: m.role,
         };
@@ -587,14 +629,16 @@ export const myClans = query({
   },
 });
 
-// Get pending invites for a user
+// Get pending invites for the current user (auth required)
 export const myInvites = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+
     const invites = await ctx.db
       .query("clanInvites")
       .withIndex("by_invitee_status", (q) =>
-        q.eq("inviteeId", args.userId).eq("status", "pending")
+        q.eq("inviteeId", user._id).eq("status", "pending")
       )
       .collect();
 
@@ -617,10 +661,23 @@ export const myInvites = query({
   },
 });
 
-// Get pending invites for a specific clan (for the invite dialog)
+// Get pending invites for a specific clan (auth required, must be member)
 export const getClanInvites = query({
   args: { clanId: v.id("clans") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+
+    // Verify requester is a clan member
+    const membership = await ctx.db
+      .query("clanMembers")
+      .withIndex("by_clan_and_user", (q) =>
+        q.eq("clanId", args.clanId).eq("userId", user._id)
+      )
+      .first();
+    if (!membership) {
+      throw new Error("You are not a member of this clan");
+    }
+
     const invites = await ctx.db
       .query("clanInvites")
       .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
@@ -667,7 +724,6 @@ export const getClanMatches = query({
 
     const clanMatches = [];
     for (const game of recentGames) {
-      // All players must have userId and be clan members
       const allClanMembers =
         game.players.length > 0 &&
         game.players.every(

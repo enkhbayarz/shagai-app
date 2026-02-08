@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -24,8 +24,8 @@ export default function JoinClanPage() {
   const [joined, setJoined] = useState(false);
 
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
 
   const clan = useQuery(api.clans.getByInviteCode, { inviteCode: code });
@@ -48,7 +48,6 @@ export default function JoinClanPage() {
     try {
       const clanId = await joinByCode({
         inviteCode: code,
-        userId: currentUser._id,
       });
       setJoined(true);
       setTimeout(() => {

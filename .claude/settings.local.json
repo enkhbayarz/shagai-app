@@ -9,7 +9,8 @@
       "Bash(find:*)",
       "Bash(tree:*)",
       "Bash(wc:*)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -27,8 +27,8 @@ export default function ProfilePage() {
   const profile = useQuery(api.profiles.getProfile, { username });
 
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
   const currentUserId = currentUser?._id as Id<"users"> | undefined;
 

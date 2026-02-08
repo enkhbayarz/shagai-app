@@ -36,8 +36,8 @@ export default function SetupPage() {
 
   // Convex queries and mutations
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
   const searchResults = useQuery(
     api.users.search,
@@ -50,7 +50,6 @@ export default function SetupPage() {
   useEffect(() => {
     if (clerkUser && currentUser === null) {
       createUser({
-        clerkId: clerkUser.id,
         email: clerkUser.emailAddresses[0]?.emailAddress || "",
         fullName: clerkUser.fullName || clerkUser.firstName || "User",
         username: clerkUser.username || `user_${clerkUser.id.slice(-6)}`,
@@ -93,7 +92,6 @@ export default function SetupPage() {
       }));
 
       const gameId = await createGame({
-        creatorId: currentUser?._id,
         playerCount,
         players: gamePlayers,
       });

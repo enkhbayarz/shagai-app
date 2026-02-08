@@ -1,19 +1,33 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getAuthUser, requireAdmin } from "./auth";
 
-// Create or get user by Clerk ID
+// Get the currently authenticated user (no args needed)
+export const getMe = query({
+  args: {},
+  handler: async (ctx) => {
+    return await getAuthUser(ctx);
+  },
+});
+
+// Create or get user by Clerk ID (derived from auth token)
 export const createOrGetUser = mutation({
   args: {
-    clerkId: v.string(),
     email: v.string(),
     fullName: v.string(),
     username: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const clerkId = identity.subject;
+
     // Check if user already exists
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
       .first();
 
     if (existing) {
@@ -22,11 +36,11 @@ export const createOrGetUser = mutation({
 
     // Create new user
     const userId = await ctx.db.insert("users", {
-      clerkId: args.clerkId,
+      clerkId,
       email: args.email,
       fullName: args.fullName,
       username: args.username,
-      role: "user", // Default role
+      role: "user",
       createdAt: Date.now(),
     });
 
@@ -34,10 +48,18 @@ export const createOrGetUser = mutation({
   },
 });
 
-// Get user by Clerk ID
+// Get user by Clerk ID (kept for backward compatibility)
 export const getByClerkId = query({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    // Users can only look up themselves
+    if (identity.subject !== args.clerkId) {
+      throw new Error("Unauthorized");
+    }
     return await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
@@ -45,47 +67,73 @@ export const getByClerkId = query({
   },
 });
 
-// Get user by ID
+// Get user by ID (public, for displaying names — strips PII)
 export const get = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const user = await ctx.db.get(args.id);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      fullName: user.fullName,
+      username: user.username,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
   },
 });
 
-// Search users by name or username
+// Search users by name or username (auth required, strips PII)
 export const search = query({
   args: { query: v.string() },
   handler: async (ctx, args) => {
+    await getAuthUser(ctx);
+
     const searchTerm = args.query.toLowerCase();
+    const users = await ctx.db.query("users").take(500);
 
-    // Get all users and filter (for small datasets)
-    const users = await ctx.db.query("users").collect();
-
-    return users.filter(
-      (user) =>
-        user.fullName.toLowerCase().includes(searchTerm) ||
-        user.username.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm)
-    );
+    return users
+      .filter(
+        (user) =>
+          user.fullName?.toLowerCase().includes(searchTerm) ||
+          user.username?.toLowerCase().includes(searchTerm)
+      )
+      .map((user) => ({
+        _id: user._id,
+        _creationTime: user._creationTime,
+        fullName: user.fullName,
+        username: user.username,
+        createdAt: user.createdAt,
+      }));
   },
 });
 
-// Get user by username
+// Get user by username (public, for profile pages — strips PII)
 export const getByUsername = query({
   args: { username: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
       .first();
+    if (!user) return null;
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      fullName: user.fullName,
+      username: user.username,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
   },
 });
 
-// Get user by email
+// Get user by email (admin only)
 export const getByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     return await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -93,16 +141,17 @@ export const getByEmail = query({
   },
 });
 
-// List all users (for admin)
+// List all users (admin only)
 export const list = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const limit = args.limit ?? 100;
     return await ctx.db.query("users").order("desc").take(limit);
   },
 });
 
-// Quick add user (for adding players during game setup)
+// Quick add user (auth required — for adding players during game setup)
 export const quickAdd = mutation({
   args: {
     fullName: v.string(),
@@ -110,16 +159,16 @@ export const quickAdd = mutation({
     username: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Generate a unique username if not provided
+    await getAuthUser(ctx);
+
     const username = args.username || `archer_${crypto.randomUUID().slice(0, 8)}`;
     const email = args.email || "";
 
     const userId = await ctx.db.insert("users", {
-      // clerkId is optional, omit for manually added users
       email,
       fullName: args.fullName,
       username,
-      role: "user", // Default role
+      role: "user",
       createdAt: Date.now(),
     });
 

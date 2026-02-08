@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { getAuthUser, getOptionalAuthUser, requireAdmin } from "./auth";
 
 // Create a new game
 export const create = mutation({
   args: {
-    creatorId: v.optional(v.id("users")),
     playerCount: v.number(),
     players: v.array(
       v.object({
@@ -15,6 +15,8 @@ export const create = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await getOptionalAuthUser(ctx);
+
     const players = args.players.map((player) => ({
       name: player.name,
       userId: player.userId,
@@ -22,7 +24,7 @@ export const create = mutation({
     }));
 
     const gameId = await ctx.db.insert("games", {
-      creatorId: args.creatorId,
+      creatorId: user?._id,
       startedAt: Date.now(),
       playerCount: args.playerCount,
       players,
@@ -35,15 +37,25 @@ export const create = mutation({
   },
 });
 
-// Get a game by ID
+// Get a game by ID (auth required — must be creator or participant)
 export const get = query({
   args: { id: v.id("games") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const user = await getAuthUser(ctx);
+    const game = await ctx.db.get(args.id);
+    if (!game) return null;
+
+    const isCreator = game.creatorId === user._id;
+    const isParticipant = game.players.some((p) => p.userId === user._id);
+    if (!isCreator && !isParticipant) {
+      throw new Error("Unauthorized: not a participant of this game");
+    }
+
+    return game;
   },
 });
 
-// Get a game by ID for public share page (no auth required)
+// Get a game by ID for public share page (no auth required, finished games only)
 export const getPublic = query({
   args: { id: v.id("games") },
   handler: async (ctx, args) => {
@@ -55,15 +67,20 @@ export const getPublic = query({
   },
 });
 
-// Record a shot
+// Record a shot (auth required — must be game creator)
 export const recordShot = mutation({
   args: {
     gameId: v.id("games"),
     isHit: v.boolean(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
     const game = await ctx.db.get(args.gameId);
     if (!game || game.isFinished) return null;
+
+    if (game.creatorId !== user._id) {
+      throw new Error("Unauthorized: only the game creator can record shots");
+    }
 
     const shotIndex = game.currentRound - 1;
     const players = [...game.players];
@@ -80,7 +97,6 @@ export const recordShot = mutation({
     let isFinished = false;
 
     if (nextPlayerIndex >= game.playerCount) {
-      // All players have shot this round
       if (game.currentRound >= 20) {
         isFinished = true;
       } else {
@@ -108,7 +124,7 @@ export const recordShot = mutation({
   },
 });
 
-// Edit a past shot (toggle hit/miss)
+// Edit a past shot (auth required — must be game creator)
 export const editShot = mutation({
   args: {
     gameId: v.id("games"),
@@ -116,8 +132,13 @@ export const editShot = mutation({
     shotIndex: v.number(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
     const game = await ctx.db.get(args.gameId);
     if (!game) return null;
+
+    if (game.creatorId !== user._id) {
+      throw new Error("Unauthorized: only the game creator can edit shots");
+    }
 
     const players = [...game.players];
     const currentShot = players[args.playerIndex].shots[args.shotIndex];
@@ -136,45 +157,47 @@ export const editShot = mutation({
   },
 });
 
-// Get recent games (for logged in user)
+// Get recent games created by the authenticated user
 export const listByCreator = query({
-  args: { creatorId: v.id("users"), limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
     const limit = args.limit ?? 20;
     return await ctx.db
       .query("games")
-      .withIndex("by_creator", (q) => q.eq("creatorId", args.creatorId))
+      .withIndex("by_creator", (q) => q.eq("creatorId", user._id))
       .order("desc")
       .take(limit);
   },
 });
 
-// Get games where user participated
+// Get games where authenticated user participated
 export const listByPlayer = query({
-  args: { userId: v.id("users"), limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
     const limit = args.limit ?? 20;
     const allGames = await ctx.db.query("games").order("desc").take(100);
 
-    // Filter games where this user is a player
     const userGames = allGames.filter((game) =>
-      game.players.some((player) => player.userId === args.userId)
+      game.players.some((player) => player.userId === user._id)
     );
 
     return userGames.slice(0, limit);
   },
 });
 
-// List all games (for admin)
+// List all games (admin only)
 export const listAll = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx);
     const limit = args.limit ?? 50;
     return await ctx.db.query("games").order("desc").take(limit);
   },
 });
 
-// Get recent finished games
+// Get recent finished games (public)
 export const listRecent = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
@@ -187,7 +210,7 @@ export const listRecent = query({
   },
 });
 
-// Get all live (in-progress) games with summary data for the live page
+// Get all live (in-progress) games with summary data (public)
 export const listLive = query({
   args: {
     playerCount: v.optional(v.number()),
@@ -201,12 +224,10 @@ export const listLive = query({
       .order("desc")
       .take(limit);
 
-    // Apply playerCount filter if specified
     const filtered = args.playerCount
       ? games.filter((g) => g.playerCount === args.playerCount)
       : games;
 
-    // Return with computed summary data for efficient card rendering
     return filtered.map((game) => ({
       _id: game._id,
       startedAt: game.startedAt,
@@ -229,10 +250,30 @@ export const listLive = query({
   },
 });
 
-// Get full game data for spectator view (public, allows both live and finished)
+// Get full game data for spectator view (public, strips userId/creatorId)
 export const getLive = query({
   args: { id: v.id("games") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const game = await ctx.db.get(args.id);
+    if (!game) return null;
+    return {
+      _id: game._id,
+      _creationTime: game._creationTime,
+      startedAt: game.startedAt,
+      finishedAt: game.finishedAt,
+      playerCount: game.playerCount,
+      currentRound: game.currentRound,
+      currentPlayerIndex: game.currentPlayerIndex,
+      isFinished: game.isFinished,
+      players: game.players.map((p) => ({
+        name: p.name,
+        shots: p.shots,
+      })),
+      result: game.result?.map((r) => ({
+        name: r.name,
+        score: r.score,
+        rank: r.rank,
+      })),
+    };
   },
 });

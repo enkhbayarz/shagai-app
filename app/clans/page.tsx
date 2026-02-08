@@ -28,20 +28,20 @@ export default function ClansPage() {
   const [createError, setCreateError] = useState("");
 
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
 
   const allClans = useQuery(api.clans.list, { limit: 50 });
 
   const myClans = useQuery(
     api.clans.myClans,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser ? {} : "skip"
   );
 
   const myInvites = useQuery(
     api.clans.myInvites,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
+    currentUser ? {} : "skip"
   );
 
   const createClan = useMutation(api.clans.create);
@@ -76,7 +76,6 @@ export default function ClansPage() {
         name: trimmedName,
         tag: trimmedTag,
         description: clanDescription.trim() || undefined,
-        userId: currentUser._id,
       });
       router.push(`/clans/${clanId}`);
     } catch (error: any) {
@@ -88,7 +87,7 @@ export default function ClansPage() {
   const handleAcceptInvite = async (inviteId: any) => {
     if (!currentUser?._id) return;
     try {
-      await acceptInvite({ inviteId, userId: currentUser._id });
+      await acceptInvite({ inviteId });
     } catch (error) {
       console.error("Failed to accept invite:", error);
     }
@@ -97,7 +96,7 @@ export default function ClansPage() {
   const handleDeclineInvite = async (inviteId: any) => {
     if (!currentUser?._id) return;
     try {
-      await declineInvite({ inviteId, userId: currentUser._id });
+      await declineInvite({ inviteId });
     } catch (error) {
       console.error("Failed to decline invite:", error);
     }

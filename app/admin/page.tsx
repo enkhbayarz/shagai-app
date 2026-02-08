@@ -18,18 +18,18 @@ export default function AdminPage() {
 
   // Get current user from Convex
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip",
+    api.users.getMe,
+    clerkUser ? {} : "skip",
   );
-
-  // Get all games
-  const allGames = useQuery(api.games.listAll, { limit: 50 });
-
-  // Get all users
-  const allUsers = useQuery(api.users.list, { limit: 50 });
 
   // Check if user is admin (based on role in Convex)
   const isAdmin = currentUser?.role === "admin";
+
+  // Only fetch admin data when user is confirmed admin
+  const allGames = useQuery(api.games.listAll, isAdmin ? { limit: 50 } : "skip");
+
+  // Only fetch admin data when user is confirmed admin
+  const allUsers = useQuery(api.users.list, isAdmin ? { limit: 50 } : "skip");
 
   // Redirect if not logged in or not admin
   useEffect(() => {

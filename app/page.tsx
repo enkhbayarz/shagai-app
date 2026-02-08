@@ -18,8 +18,8 @@ import { api } from "@/convex/_generated/api";
 export default function HomePage() {
   const { user: clerkUser } = useUser();
   const currentUser = useQuery(
-    api.users.getByClerkId,
-    clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
+    api.users.getMe,
+    clerkUser ? {} : "skip"
   );
 
   const containerVariants = {
