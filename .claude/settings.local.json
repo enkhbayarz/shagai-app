@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(bun run build:*)",
-      "Bash(bun run lint:*)"
+      "Bash(bun run lint:*)",
+      "Bash(bunx convex codegen:*)"
     ]
   }
 }

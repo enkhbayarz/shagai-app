@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as clans from "../clans.js";
+import type * as dashboard from "../dashboard.js";
 import type * as games from "../games.js";
 import type * as settings from "../settings.js";
 import type * as users from "../users.js";
@@ -19,6 +21,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  clans: typeof clans;
+  dashboard: typeof dashboard;
   games: typeof games;
   settings: typeof settings;
   users: typeof users;

@@ -162,6 +162,45 @@ export default function HomePage() {
           </Link>
         </motion.div>
 
+        {/* Dashboard - Public */}
+        <motion.div variants={itemVariants}>
+          <Link href="/home" className="block">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+            >
+              ХӨТӨЧ
+            </Button>
+          </Link>
+        </motion.div>
+
+        {/* Clan - Auth required */}
+        <motion.div variants={itemVariants}>
+          <SignedIn>
+            <Link href="/clans" className="block">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                КЛАН
+              </Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
+              >
+                КЛАН
+              </Button>
+            </SignInButton>
+          </SignedOut>
+        </motion.div>
+
         {/* History */}
         <motion.div variants={itemVariants}>
           <SignedIn>
