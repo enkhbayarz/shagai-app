@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -18,8 +18,20 @@ import {
 
 export default function TeamGamePage() {
   const params = useParams();
-  const gameId = params.id as Id<"teamGames">;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
+  // Validate route param before casting
+  const rawId = params.id;
+  if (!rawId || typeof rawId !== "string") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">Буруу холбоос</div>
+      </div>
+    );
+  }
+
+  const gameId = rawId as Id<"teamGames">;
 
   // Fetch game data
   const game = useQuery(api.teamGames.get, { id: gameId });
@@ -36,10 +48,24 @@ export default function TeamGamePage() {
     }
   }, [game?.currentPhaseIndex]);
 
-  if (!game) {
+  // Distinguish loading from not found
+  if (game === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Ачааллаж байна...</div>
+      </div>
+    );
+  }
+
+  if (game === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-bold mb-2">Тоглолт олдсонгүй</h1>
+          <Link href="/">
+            <Button>Нүүр хуудас</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -57,12 +83,16 @@ export default function TeamGamePage() {
     return game.awayTeam.players[currentShooter.playerIndex]?.name ?? "Тоглогч";
   };
 
-  // Handle shot recording
+  // Handle shot recording with loading state to prevent duplicate calls
   const handleRecordShot = async (isHit: boolean) => {
+    if (isRecording) return; // Prevent double-click
+    setIsRecording(true);
     try {
       await recordShot({ gameId, isHit });
     } catch (error) {
       console.error("Failed to record shot:", error);
+    } finally {
+      setIsRecording(false);
     }
   };
 
@@ -196,6 +226,7 @@ export default function TeamGamePage() {
           shotNumber={game.currentShotInTurn + 1}
           onHit={() => handleRecordShot(true)}
           onMiss={() => handleRecordShot(false)}
+          disabled={isRecording}
         />
       )}
 

@@ -39,7 +39,24 @@ export default function TeamSharePage() {
     );
   }
 
-  const result = game.result!;
+  // Validate result exists
+  if (!game.result) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Тоглолт дуусаагүй</h1>
+          <p className="text-muted-foreground mb-4">
+            Энэ тоглолт дуусаагүй байна.
+          </p>
+          <Link href="/">
+            <Button>Нүүр хуудас руу</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const result = game.result;
   const winnerName = result.winner === "home" ? game.homeClanName : game.awayClanName;
   const winnerTag = result.winner === "home" ? game.homeClanTag : game.awayClanTag;
   const winnerColor = result.winner === "home" ? "text-blue-500" : "text-orange-500";

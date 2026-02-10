@@ -63,14 +63,22 @@ export function TeamPlayerCard({
         {shots.map((shot, i) => {
           const isCurrentShot = isCurrentShooter && i === currentShotIndex;
           let bgClass = "bg-gray-300"; // unshot
-          if (shot === true) bgClass = "bg-emerald-500"; // hit
-          if (shot === false) bgClass = "bg-red-500"; // miss
+          let ariaLabel = `Сум ${i + 1}: хараахан харваагүй`;
+          if (shot === true) {
+            bgClass = "bg-emerald-500"; // hit
+            ariaLabel = `Сум ${i + 1}: оносон`;
+          }
+          if (shot === false) {
+            bgClass = "bg-red-500"; // miss
+            ariaLabel = `Сум ${i + 1}: алдсан`;
+          }
 
           return (
             <button
               key={i}
               onClick={() => shot !== null && onEditShot?.(i)}
               disabled={shot === null}
+              aria-label={ariaLabel}
               className={`w-3 h-3 rounded-full transition-all ${bgClass} ${
                 isCurrentShot ? "ring-2 ring-amber-400 scale-125" : ""
               } ${shot !== null ? "cursor-pointer hover:opacity-80" : ""}`}

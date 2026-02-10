@@ -749,15 +749,23 @@ export const getClanMatches = query({
   },
 });
 
-// Add test players to a clan (for testing purposes)
+// Add test players to a clan (admin only, for testing purposes)
 export const addTestPlayers = mutation({
   args: {
     clanId: v.id("clans"),
     count: v.number(),
   },
   handler: async (ctx, args) => {
-    // Just verify user is authenticated (no membership check for testing)
-    await getAuthUser(ctx);
+    // Only allow admins to add test players
+    const user = await getAuthUser(ctx);
+    if (user.role !== "admin") {
+      throw new Error("Only admins can add test players");
+    }
+
+    // Limit count to prevent abuse
+    if (args.count < 1 || args.count > 10) {
+      throw new Error("Count must be between 1 and 10");
+    }
 
     // Verify clan exists
     const clan = await ctx.db.get(args.clanId);
@@ -765,15 +773,24 @@ export const addTestPlayers = mutation({
       throw new Error("Clan not found");
     }
 
+    // Check current member count to avoid exceeding limit
+    const currentMembers = await ctx.db
+      .query("clanMembers")
+      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .collect();
+
+    if (currentMembers.length + args.count > 50) {
+      throw new Error(`Cannot add ${args.count} players. Clan would exceed 50 member limit.`);
+    }
+
     const testNames = [
       "Батбаяр", "Болд", "Ганбат", "Дорж", "Энхбаатар",
       "Жавхлан", "Мөнхбат", "Наранбаатар", "Отгонбаяр", "Пүрэвдорж",
-      "Санжаа", "Тамир", "Ундрах", "Хүрэлбаатар", "Цэрэндорж"
     ];
 
     const addedUserIds: string[] = [];
 
-    for (let i = 0; i < Math.min(args.count, 10); i++) {
+    for (let i = 0; i < args.count; i++) {
       const name = testNames[i % testNames.length];
       const uniqueSuffix = `${Date.now()}_${i}`;
 

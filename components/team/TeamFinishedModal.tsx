@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Copy, Check, Home, Share2 } from "lucide-react";
 import Link from "next/link";
@@ -35,20 +35,33 @@ export function TeamFinishedModal({
   gameId,
 }: TeamFinishedModalProps) {
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const winnerName = result.winner === "home" ? homeClanName : awayClanName;
   const winnerTag = result.winner === "home" ? homeClanTag : awayClanTag;
   const winnerColor = result.winner === "home" ? "text-blue-500" : "text-orange-500";
 
-  const shareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/team/s/${gameId}`
-    : "";
+  // Set shareUrl client-side to avoid SSR issues
+  useEffect(() => {
+    setShareUrl(`${window.location.origin}/team/s/${gameId}`);
+  }, [gameId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const handleCopy = async () => {
+    if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Clear any existing timeout before setting new one
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
     }

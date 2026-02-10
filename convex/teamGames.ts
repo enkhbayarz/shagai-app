@@ -203,6 +203,26 @@ export const create = mutation({
       throw new Error("Home and away clans must be different");
     }
 
+    // Validate no duplicate players within home team
+    const homeUserIds = args.homeTeamPlayers.map((p) => p.userId);
+    const uniqueHomeIds = new Set(homeUserIds);
+    if (uniqueHomeIds.size !== homeUserIds.length) {
+      throw new Error("Duplicate players in home team are not allowed");
+    }
+
+    // Validate no duplicate players within away team
+    const awayUserIds = args.awayTeamPlayers.map((p) => p.userId);
+    const uniqueAwayIds = new Set(awayUserIds);
+    if (uniqueAwayIds.size !== awayUserIds.length) {
+      throw new Error("Duplicate players in away team are not allowed");
+    }
+
+    // Validate no player appears in both teams
+    const allPlayerIds = new Set([...homeUserIds, ...awayUserIds]);
+    if (allPlayerIds.size !== homeUserIds.length + awayUserIds.length) {
+      throw new Error("A player cannot be on both teams");
+    }
+
     // Validate player counts
     const homeRegularPlayers = args.homeTeamPlayers.filter((p) => !p.isSubstitute);
     const awayRegularPlayers = args.awayTeamPlayers.filter((p) => !p.isSubstitute);
@@ -568,6 +588,20 @@ export const editShot = mutation({
     if (!game) throw new Error("Game not found");
     if (game.creatorId !== user._id) {
       throw new Error("Only the game creator can edit shots");
+    }
+
+    // Bounds validation
+    if (args.setIndex < 0 || args.setIndex >= game.sets.length) {
+      throw new Error(`Invalid setIndex: ${args.setIndex}. Valid range: 0-${game.sets.length - 1}`);
+    }
+    if (args.phaseIndex < 0 || args.phaseIndex >= game.sets[args.setIndex].phases.length) {
+      throw new Error(`Invalid phaseIndex: ${args.phaseIndex}. Valid range: 0-${game.sets[args.setIndex].phases.length - 1}`);
+    }
+    if (args.shooterIndex < 0 || args.shooterIndex >= game.sets[args.setIndex].phases[args.phaseIndex].shooters.length) {
+      throw new Error(`Invalid shooterIndex: ${args.shooterIndex}. Valid range: 0-${game.sets[args.setIndex].phases[args.phaseIndex].shooters.length - 1}`);
+    }
+    if (args.shotIndex < 0 || args.shotIndex >= game.sets[args.setIndex].phases[args.phaseIndex].shooters[args.shooterIndex].shots.length) {
+      throw new Error(`Invalid shotIndex: ${args.shotIndex}. Valid range: 0-${game.sets[args.setIndex].phases[args.phaseIndex].shooters[args.shooterIndex].shots.length - 1}`);
     }
 
     const sets = [...game.sets];
