@@ -114,7 +114,7 @@ export default function TeamGamePage() {
   const isGoldenPoint = game.goldenPoint?.isActive;
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen pb-52">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
