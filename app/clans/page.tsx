@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Shield, Check, X, Plus } from "lucide-react";
+import { Shield, Check, X, Plus } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -137,24 +137,10 @@ export default function ClansPage() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex items-center gap-2 mb-6"
       >
-        <Link href="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 touch-manipulation"
-            aria-label="Буцах"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            БУЦАХ
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          <h1 className="font-display text-2xl tracking-wider">КЛАН</h1>
-        </div>
-        <div className="w-20" />
+        <Shield className="w-5 h-5" />
+        <h1 className="font-display text-2xl tracking-wider">КЛАН</h1>
       </motion.header>
 
       <div className="max-w-md mx-auto">

@@ -1,306 +1,74 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { TargetIllustration } from "@/components/home/TargetIllustration";
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
-} from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { TopPlayersCard } from "@/components/home/TopPlayersCard";
+import { LiveStatsCard } from "@/components/home/LiveStatsCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default function HomePage() {
-  const { user: clerkUser } = useUser();
-  const currentUser = useQuery(
-    api.users.getMe,
-    clerkUser ? {} : "skip"
-  );
+export default function DashboardPage() {
+  const [showAll, setShowAll] = useState(false);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
-    },
-  };
+  const leaderboard = useQuery(api.dashboard.getLeaderboard, { limit: 50 });
+  const liveStats = useQuery(api.dashboard.getLiveStats, {});
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring" as const,
-        stiffness: 100,
-      },
-    },
-  };
+  // Loading state
+  if (leaderboard === undefined || liveStats === undefined) {
+    return (
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-80 rounded-xl" />
+            <Skeleton className="h-56 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-6 py-12">
-      {/* Auth Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-4 right-4"
-      >
-        <SignedOut>
-          <div className="flex gap-2">
-            <SignInButton mode="modal">
-              <Button variant="outline" size="sm" className="touch-manipulation">
-                Нэвтрэх
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button size="sm" className="bg-black text-white hover:bg-black/90 touch-manipulation">
-                Бүртгүүлэх
-              </Button>
-            </SignUpButton>
-          </div>
-        </SignedOut>
-        <SignedIn>
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-10 h-10",
-              },
-            }}
-          />
-        </SignedIn>
-      </motion.div>
+    <div className="p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Leaderboard */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <TopPlayersCard
+              players={leaderboard}
+              showAll={showAll}
+              onToggleShowAll={() => setShowAll(!showAll)}
+            />
+          </motion.div>
 
-      {/* Target illustration */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="flex justify-center mb-6"
-      >
+          {/* Live Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <LiveStatsCard stats={liveStats} />
+          </motion.div>
+        </div>
+
+        {/* Recent Games Placeholder */}
         <motion.div
-          animate={{ rotate: [0, 1, -1, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-card rounded-xl p-5 shadow-sm border"
         >
-          <TargetIllustration />
+          <h3 className="font-medium mb-4">Сүүлийн тоглоом</h3>
+          <div className="text-sm text-muted-foreground text-center py-8">
+            Тоглоомын түүх энд харагдана
+          </div>
         </motion.div>
-      </motion.div>
-
-      {/* Text Logo */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
-        className="mb-12 text-center"
-      >
-        <h1 className="font-display text-7xl md:text-8xl tracking-widest leading-none">
-          ШАГАЙ
-        </h1>
-        <h1 className="font-display text-5xl md:text-6xl tracking-[0.3em] text-black/70">
-          ХАРВАА
-        </h1>
-      </motion.div>
-
-      {/* Menu Buttons */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex flex-col gap-4 w-full max-w-xs"
-      >
-        {/* Team Shooting - Active */}
-        <motion.div variants={itemVariants}>
-          <SignedIn>
-            <Link href="/team/setup" className="block">
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full h-14 text-lg font-medium bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 touch-manipulation"
-              >
-                БАГИЙН ХАРВАА
-              </Button>
-            </Link>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full h-14 text-lg font-medium bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 touch-manipulation"
-              >
-                БАГИЙН ХАРВАА
-              </Button>
-            </SignInButton>
-          </SignedOut>
-        </motion.div>
-
-        {/* Series Shooting - Active */}
-        <motion.div variants={itemVariants}>
-          <SignedIn>
-            <Link href="/series/setup" className="block">
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
-              >
-                ЦУВАА ХАРВАА
-              </Button>
-            </Link>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button
-                variant="default"
-                size="lg"
-                className="w-full h-14 text-lg font-medium bg-black text-white hover:bg-black/90 touch-manipulation"
-              >
-                ЦУВАА ХАРВАА
-              </Button>
-            </SignInButton>
-          </SignedOut>
-        </motion.div>
-
-        {/* Live Games - Public, no auth required */}
-        <motion.div variants={itemVariants}>
-          <Link href="/live" className="block">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation relative"
-            >
-              <span className="absolute left-4 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-              </span>
-              ШУУД
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Dashboard - Public */}
-        <motion.div variants={itemVariants}>
-          <Link href="/home" className="block">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-            >
-              ХӨТӨЧ
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Clan - Auth required */}
-        <motion.div variants={itemVariants}>
-          <SignedIn>
-            <Link href="/clans" className="block">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                КЛАН
-              </Button>
-            </Link>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                КЛАН
-              </Button>
-            </SignInButton>
-          </SignedOut>
-        </motion.div>
-
-        {/* Profile */}
-        <motion.div variants={itemVariants}>
-          <SignedIn>
-            <Link
-              href={currentUser?.username ? `/profile/${currentUser.username}` : "#"}
-              className="block"
-            >
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                ПРОФАЙЛ
-              </Button>
-            </Link>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                ПРОФАЙЛ
-              </Button>
-            </SignInButton>
-          </SignedOut>
-        </motion.div>
-
-        {/* History */}
-        <motion.div variants={itemVariants}>
-          <SignedIn>
-            <Link href="/history" className="block">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                ТҮҮХ
-              </Button>
-            </Link>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-              >
-                ТҮҮХ
-              </Button>
-            </SignInButton>
-          </SignedOut>
-        </motion.div>
-
-        {/* Settings */}
-        <motion.div variants={itemVariants}>
-          <Link href="/settings" className="block">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-14 text-lg font-medium border-black/20 hover:bg-black/5 touch-manipulation"
-            >
-              ТОХИРГОО
-            </Button>
-          </Link>
-        </motion.div>
-      </motion.div>
-
-      {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5, duration: 0.5 }}
-        className="mt-16 text-sm text-muted-foreground"
-      >
-        v2.0
-      </motion.p>
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Radio, Users, Search, Home } from "lucide-react";
+import { Radio, Users, Search } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -58,23 +58,10 @@ export default function LivePage() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex items-center gap-2 mb-6"
       >
-        <Link href="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 touch-manipulation"
-          >
-            <Home className="w-4 h-4" />
-            НҮҮР
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Radio className="w-5 h-5 text-red-500 animate-pulse" />
-          <h1 className="font-display text-2xl tracking-wider">ШУУД</h1>
-        </div>
-        <div className="w-20" /> {/* Spacer for centering */}
+        <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+        <h1 className="font-display text-2xl tracking-wider">ШУУД</h1>
       </motion.header>
 
       <div className="max-w-md mx-auto">

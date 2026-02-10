@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Trophy, Calendar, User, Shield } from "lucide-react";
+import { Users, Trophy, Calendar, User, Shield } from "lucide-react";
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -84,21 +84,10 @@ export default function AdminPage() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center gap-2 mb-8"
       >
-        <Link href="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 touch-manipulation"
-            aria-label="Буцах"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            БУЦАХ
-          </Button>
-        </Link>
+        <Shield className="w-5 h-5" />
         <h1 className="font-display text-2xl tracking-wider">АДМИН</h1>
-        <div className="w-20" />
       </motion.header>
 
       <div className="max-w-4xl mx-auto space-y-8">

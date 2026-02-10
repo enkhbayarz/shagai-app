@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Play, Check, ChevronRight, ChevronLeft, Plus } from "lucide-react";
+import { Users, Play, Check, ChevronRight, ChevronLeft, Plus } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -201,16 +201,9 @@ export default function TeamSetupPage() {
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-8"
+          className="mb-8"
         >
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2 touch-manipulation">
-              <ArrowLeft className="w-4 h-4" />
-              БУЦАХ
-            </Button>
-          </Link>
-          <h1 className="font-display text-2xl tracking-wider">БАГИЙН ХАРВАА</h1>
-          <div className="w-20" />
+          <h1 className="font-display text-2xl tracking-wider text-center">БАГИЙН ХАРВАА</h1>
         </motion.header>
 
         <div className="max-w-md mx-auto">
@@ -239,16 +232,9 @@ export default function TeamSetupPage() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="mb-8"
       >
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-2 touch-manipulation">
-            <ArrowLeft className="w-4 h-4" />
-            БУЦАХ
-          </Button>
-        </Link>
-        <h1 className="font-display text-2xl tracking-wider">БАГИЙН ХАРВАА</h1>
-        <div className="w-20" />
+        <h1 className="font-display text-2xl tracking-wider text-center">БАГИЙН ХАРВАА</h1>
       </motion.header>
 
       {/* Progress indicator */}

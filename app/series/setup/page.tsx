@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Play, X } from "lucide-react";
+import { User, Play, X } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -111,21 +111,9 @@ export default function SetupPage() {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="mb-8"
       >
-        <Link href="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 touch-manipulation"
-            aria-label="Буцах"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            БУЦАХ
-          </Button>
-        </Link>
-        <h1 className="font-display text-2xl tracking-wider">ЦУВАА ХАРВАА</h1>
-        <div className="w-20" />
+        <h1 className="font-display text-2xl tracking-wider text-center">ЦУВАА ХАРВАА</h1>
       </motion.header>
 
       <div className="max-w-md mx-auto space-y-6">
