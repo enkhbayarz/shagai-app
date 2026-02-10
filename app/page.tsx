@@ -115,17 +115,30 @@ export default function HomePage() {
         animate="visible"
         className="flex flex-col gap-4 w-full max-w-xs"
       >
-        {/* Team Shooting - Disabled */}
+        {/* Team Shooting - Active */}
         <motion.div variants={itemVariants}>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full h-14 text-lg font-medium opacity-50 cursor-not-allowed"
-            disabled
-            aria-label="Багийн харваа - Удахгүй нээгдэнэ"
-          >
-            БАГИЙН ХАРВАА
-          </Button>
+          <SignedIn>
+            <Link href="/team/setup" className="block">
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full h-14 text-lg font-medium bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 touch-manipulation"
+              >
+                БАГИЙН ХАРВАА
+              </Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full h-14 text-lg font-medium bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 touch-manipulation"
+              >
+                БАГИЙН ХАРВАА
+              </Button>
+            </SignInButton>
+          </SignedOut>
         </motion.div>
 
         {/* Series Shooting - Active */}

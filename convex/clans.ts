@@ -749,6 +749,58 @@ export const getClanMatches = query({
   },
 });
 
+// Add test players to a clan (for testing purposes)
+export const addTestPlayers = mutation({
+  args: {
+    clanId: v.id("clans"),
+    count: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Just verify user is authenticated (no membership check for testing)
+    await getAuthUser(ctx);
+
+    // Verify clan exists
+    const clan = await ctx.db.get(args.clanId);
+    if (!clan) {
+      throw new Error("Clan not found");
+    }
+
+    const testNames = [
+      "Батбаяр", "Болд", "Ганбат", "Дорж", "Энхбаатар",
+      "Жавхлан", "Мөнхбат", "Наранбаатар", "Отгонбаяр", "Пүрэвдорж",
+      "Санжаа", "Тамир", "Ундрах", "Хүрэлбаатар", "Цэрэндорж"
+    ];
+
+    const addedUserIds: string[] = [];
+
+    for (let i = 0; i < Math.min(args.count, 10); i++) {
+      const name = testNames[i % testNames.length];
+      const uniqueSuffix = `${Date.now()}_${i}`;
+
+      // Create test user
+      const userId = await ctx.db.insert("users", {
+        email: `test_${uniqueSuffix}@test.com`,
+        fullName: `${name} (Test)`,
+        username: `test_${uniqueSuffix}`,
+        role: "user",
+        createdAt: Date.now(),
+      });
+
+      // Add to clan
+      await ctx.db.insert("clanMembers", {
+        clanId: args.clanId,
+        userId,
+        role: "member",
+        joinedAt: Date.now(),
+      });
+
+      addedUserIds.push(userId);
+    }
+
+    return { addedCount: addedUserIds.length };
+  },
+});
+
 // Get aggregate clan stats
 export const getClanStats = query({
   args: { clanId: v.id("clans") },

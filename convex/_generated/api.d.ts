@@ -16,6 +16,7 @@ import type * as games from "../games.js";
 import type * as profiles from "../profiles.js";
 import type * as settings from "../settings.js";
 import type * as stats from "../stats.js";
+import type * as teamGames from "../teamGames.js";
 import type * as users from "../users.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   profiles: typeof profiles;
   settings: typeof settings;
   stats: typeof stats;
+  teamGames: typeof teamGames;
   users: typeof users;
 }>;
 
