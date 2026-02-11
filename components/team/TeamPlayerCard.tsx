@@ -1,24 +1,28 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { User } from "lucide-react";
+import { User, Edit2 } from "lucide-react";
 
 interface TeamPlayerCardProps {
   name: string;
   team: "home" | "away";
+  playerIndex: number;
   shots: (boolean | null)[];
   isCurrentShooter?: boolean;
   currentShotIndex?: number;
   onEditShot?: (shotIndex: number) => void;
+  onEditName?: (team: "home" | "away", playerIndex: number) => void;
 }
 
 export function TeamPlayerCard({
   name,
   team,
+  playerIndex,
   shots,
   isCurrentShooter = false,
   currentShotIndex,
   onEditShot,
+  onEditName,
 }: TeamPlayerCardProps) {
   const borderColor = team === "home" ? "border-blue-500" : "border-orange-500";
   const bgColor = isCurrentShooter
@@ -38,25 +42,36 @@ export function TeamPlayerCard({
         isCurrentShooter ? "ring-2 ring-amber-400 ring-offset-1" : ""
       }`}
     >
-      {/* Player Avatar */}
-      <div className="flex justify-center mb-1">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            team === "home" ? "bg-blue-100" : "bg-orange-100"
-          }`}
-        >
-          <User
-            className={`w-4 h-4 ${
-              team === "home" ? "text-blue-600" : "text-orange-600"
+      {/* Player Avatar & Name - Tappable for editing */}
+      <button
+        onClick={() => onEditName?.(team, playerIndex)}
+        disabled={!onEditName}
+        className={`w-full ${onEditName ? "cursor-pointer hover:opacity-80" : ""}`}
+      >
+        <div className="flex justify-center mb-1 relative">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              team === "home" ? "bg-blue-100" : "bg-orange-100"
             }`}
-          />
+          >
+            <User
+              className={`w-4 h-4 ${
+                team === "home" ? "text-blue-600" : "text-orange-600"
+              }`}
+            />
+          </div>
+          {onEditName && (
+            <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-gray-200 rounded-full flex items-center justify-center">
+              <Edit2 className="w-2 h-2 text-gray-500" />
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Player Name */}
-      <div className="text-center text-[10px] font-medium truncate mb-1 leading-tight">
-        {displayName}
-      </div>
+        {/* Player Name */}
+        <div className="text-center text-[10px] font-medium truncate mb-1 leading-tight">
+          {displayName}
+        </div>
+      </button>
 
       {/* Shot Indicators - 2x2 Grid */}
       <div className="grid grid-cols-2 gap-1 justify-items-center">

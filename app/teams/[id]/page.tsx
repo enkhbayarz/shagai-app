@@ -21,40 +21,44 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RosterTable } from "@/components/clans/RosterTable";
-import { ClanMatchCard } from "@/components/clans/ClanMatchCard";
-import { InviteDialog } from "@/components/clans/InviteDialog";
+import { RosterTable } from "@/components/teams/RosterTable";
+import { TeamMatchCard } from "@/components/teams/TeamMatchCard";
+import { InviteDialog } from "@/components/teams/InviteDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ClanDetailPage() {
+export default function TeamDetailPage() {
   const params = useParams();
   const router = useRouter();
   const rawId = params.id;
-  const clanId = typeof rawId === "string" ? (rawId as Id<"clans">) : undefined;
+  const teamId = typeof rawId === "string" ? (rawId as Id<"clans">) : undefined;
   const { user: clerkUser } = useUser();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [kickingUserId, setKickingUserId] = useState<string | null>(null);
 
   const currentUser = useQuery(
     api.users.getMe,
     clerkUser ? {} : "skip"
   );
 
-  const clan = useQuery(api.clans.get, clanId ? { id: clanId } : "skip");
-  const members = useQuery(api.clans.getMembers, clanId ? { clanId } : "skip");
-  const memberStats = useQuery(api.clans.getMemberStats, clanId ? { clanId } : "skip");
-  const clanStats = useQuery(api.clans.getClanStats, clanId ? { clanId } : "skip");
-  const clanMatches = useQuery(api.clans.getClanMatches, clanId ? {
-    clanId,
+  const team = useQuery(api.teams.get, teamId ? { id: teamId } : "skip");
+  const members = useQuery(api.teams.getMembers, teamId ? { teamId } : "skip");
+  const memberStats = useQuery(api.teams.getMemberStats, teamId ? { teamId } : "skip");
+  const teamStats = useQuery(api.teams.getTeamStats, teamId ? { teamId } : "skip");
+  const teamMatches = useQuery(api.teams.getTeamMatches, teamId ? {
+    teamId,
     limit: 10,
   } : "skip");
 
-  const leaveClan = useMutation(api.clans.leave);
-  const kickMember = useMutation(api.clans.kick);
-  const deleteClan = useMutation(api.clans.deleteClan);
+  const leaveTeam = useMutation(api.teams.leave);
+  const kickMember = useMutation(api.teams.kick);
+  const deleteTeam = useMutation(api.teams.deleteTeam);
 
-  // Determine user's role in this clan
+  // Determine user's role in this team
   const myMembership = members?.find(
     (m) => m.userId === currentUser?._id
   );
@@ -62,44 +66,59 @@ export default function ClanDetailPage() {
   const isMember = !!myMembership;
 
   const handleLeave = async () => {
-    if (!currentUser?._id || !clanId) return;
+    if (!currentUser?._id || !teamId || isLeaving) return;
+    setActionError("");
+    setIsLeaving(true);
     try {
-      await leaveClan({ clanId });
-      router.push("/clans");
-    } catch (error) {
+      await leaveTeam({ teamId });
+      router.push("/teams");
+    } catch (error: any) {
       console.error("Failed to leave:", error);
+      setActionError(error.message || "Багаас гарахад алдаа гарлаа");
+      setIsLeaving(false);
+      setConfirmLeave(false);
     }
   };
 
   const handleKick = async (targetUserId: string) => {
-    if (!currentUser?._id || !clanId) return;
+    if (!currentUser?._id || !teamId || kickingUserId) return;
+    setActionError("");
+    setKickingUserId(targetUserId);
     try {
       await kickMember({
-        clanId,
+        teamId,
         targetUserId: targetUserId as Id<"users">,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to kick:", error);
+      setActionError(error.message || "Гишүүнийг хасахад алдаа гарлаа");
+    } finally {
+      setKickingUserId(null);
     }
   };
 
   const handleDelete = async () => {
-    if (!currentUser?._id || !clanId) return;
+    if (!currentUser?._id || !teamId || isDeleting) return;
+    setActionError("");
+    setIsDeleting(true);
     try {
-      await deleteClan({ clanId });
-      router.push("/clans");
-    } catch (error) {
+      await deleteTeam({ teamId });
+      router.push("/teams");
+    } catch (error: any) {
       console.error("Failed to delete:", error);
+      setActionError(error.message || "Багийг устгахад алдаа гарлаа");
+      setIsDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
   // Invalid ID
-  if (!clanId) {
+  if (!teamId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Shield className="w-16 h-16 text-gray-300" />
         <p className="text-muted-foreground">Буруу холбоос байна</p>
-        <Link href="/clans">
+        <Link href="/teams">
           <Button>Буцах</Button>
         </Link>
       </div>
@@ -107,7 +126,7 @@ export default function ClanDetailPage() {
   }
 
   // Loading
-  if (clan === undefined || members === undefined) {
+  if (team === undefined || members === undefined) {
     return (
       <div className="min-h-screen px-4 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -128,12 +147,12 @@ export default function ClanDetailPage() {
     );
   }
 
-  if (clan === null) {
+  if (team === null) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Shield className="w-16 h-16 text-gray-300" />
-        <p className="text-muted-foreground">Клан олдсонгүй</p>
-        <Link href="/clans">
+        <p className="text-muted-foreground">Баг олдсонгүй</p>
+        <Link href="/teams">
           <Button>Буцах</Button>
         </Link>
       </div>
@@ -166,7 +185,7 @@ export default function ClanDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between mb-6"
       >
-        <Link href="/clans">
+        <Link href="/teams">
           <Button
             variant="ghost"
             size="sm"
@@ -177,12 +196,12 @@ export default function ClanDetailPage() {
             БУЦАХ
           </Button>
         </Link>
-        <h1 className="font-display text-2xl tracking-wider">КЛАН</h1>
+        <h1 className="font-display text-2xl tracking-wider">БАГ</h1>
         <div className="w-20" />
       </motion.header>
 
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Clan Header */}
+        {/* Team Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -195,19 +214,19 @@ export default function ClanDetailPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xl font-bold">{clan.name}</h2>
-                    <Badge variant="secondary">{clan.tag}</Badge>
+                    <h2 className="text-xl font-bold">{team.name}</h2>
+                    <Badge variant="secondary">{team.tag}</Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                    <span>@{clan.creatorName}</span>
+                    <span>@{team.creatorName}</span>
                     <span>·</span>
                     <span>
-                      {new Date(clan.createdAt).toLocaleDateString("mn-MN")}
+                      {new Date(team.createdAt).toLocaleDateString("mn-MN")}
                     </span>
                   </div>
-                  {clan.description && (
+                  {team.description && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      {clan.description}
+                      {team.description}
                     </p>
                   )}
                 </div>
@@ -234,13 +253,15 @@ export default function ClanDetailPage() {
                           variant="destructive"
                           size="sm"
                           onClick={handleLeave}
+                          disabled={isLeaving}
                         >
-                          Тийм, гарах
+                          {isLeaving ? "Гарч байна..." : "Тийм, гарах"}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setConfirmLeave(false)}
+                          disabled={isLeaving}
                         >
                           Болих
                         </Button>
@@ -266,13 +287,15 @@ export default function ClanDetailPage() {
                           variant="destructive"
                           size="sm"
                           onClick={handleDelete}
+                          disabled={isDeleting}
                         >
-                          Тийм, устгах
+                          {isDeleting ? "Устгаж байна..." : "Тийм, устгах"}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setConfirmDelete(false)}
+                          disabled={isDeleting}
                         >
                           Болих
                         </Button>
@@ -291,6 +314,11 @@ export default function ClanDetailPage() {
                   </>
                 )}
               </div>
+
+              {/* Error display */}
+              {actionError && (
+                <p className="text-sm text-red-500 mt-3">{actionError}</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -305,9 +333,9 @@ export default function ClanDetailPage() {
           <Card className="glass">
             <CardContent className="pt-4 text-center">
               <Users className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
-              <div className="text-xs text-muted-foreground">Гишүүд</div>
+              <div className="text-xs text-muted-foreground">Харваачид</div>
               <div className="font-score text-2xl font-bold tabular-nums">
-                {clanStats?.memberCount ?? 0}
+                {teamStats?.memberCount ?? 0}
                 <span className="text-sm text-muted-foreground font-normal">
                   /50
                 </span>
@@ -319,7 +347,7 @@ export default function ClanDetailPage() {
               <Target className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
               <div className="text-xs text-muted-foreground">Дундаж оноо</div>
               <div className="font-score text-2xl font-bold tabular-nums">
-                {clanStats?.avgScore ?? 0}
+                {teamStats?.avgScore ?? 0}
               </div>
             </CardContent>
           </Card>
@@ -328,7 +356,7 @@ export default function ClanDetailPage() {
               <Swords className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
               <div className="text-xs text-muted-foreground">Тоглоом</div>
               <div className="font-score text-2xl font-bold tabular-nums">
-                {clanStats?.totalMatches ?? 0}
+                {teamStats?.totalMatches ?? 0}
               </div>
             </CardContent>
           </Card>
@@ -345,11 +373,11 @@ export default function ClanDetailPage() {
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-muted-foreground" />
                 <h3 className="font-display text-lg tracking-wider">
-                  Гишүүд
+                  Харваачид
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Бүх гишүүд болон тэдний статистик
+                Бүх харваачид болон тэдний статистик
               </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -378,18 +406,18 @@ export default function ClanDetailPage() {
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Кланы сүүлийн 10 тоглоом
+                Багийн сүүлийн 10 тоглоом
               </p>
             </CardHeader>
             <CardContent>
-              {!clanMatches || clanMatches.length === 0 ? (
+              {!teamMatches || teamMatches.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Кланы тоглоом олдсонгүй
+                  Багийн тоглоом олдсонгүй
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {clanMatches.map((match) => (
-                    <ClanMatchCard key={match._id} match={match} />
+                  {teamMatches.map((match) => (
+                    <TeamMatchCard key={match._id} match={match} />
                   ))}
                 </div>
               )}
@@ -399,12 +427,12 @@ export default function ClanDetailPage() {
       </div>
 
       {/* Invite Dialog */}
-      {isLeader && currentUser && clan.inviteCode && (
+      {isLeader && currentUser && team.inviteCode && (
         <InviteDialog
           open={inviteDialogOpen}
           onOpenChange={setInviteDialogOpen}
-          clanId={clanId}
-          inviteCode={clan.inviteCode}
+          teamId={teamId}
+          inviteCode={team.inviteCode}
         />
       )}
     </div>

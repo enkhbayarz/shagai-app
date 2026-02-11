@@ -116,10 +116,14 @@ export default function TeamSharePage() {
             {/* Away Team */}
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-orange-100 mx-auto mb-2 flex items-center justify-center">
-                <span className="text-orange-600 font-bold">{game.awayClanTag[0]}</span>
+                <span className="text-orange-600 font-bold">
+                  {game.awayClanTag?.[0] ?? game.awayClanName?.[0] ?? "З"}
+                </span>
               </div>
               <div className="font-medium text-sm">{game.awayClanName}</div>
-              <div className="text-xs text-muted-foreground">[{game.awayClanTag}]</div>
+              {game.awayClanTag && (
+                <div className="text-xs text-muted-foreground">[{game.awayClanTag}]</div>
+              )}
             </div>
 
             {/* VS */}
@@ -130,10 +134,14 @@ export default function TeamSharePage() {
             {/* Home Team */}
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-blue-100 mx-auto mb-2 flex items-center justify-center">
-                <span className="text-blue-600 font-bold">{game.homeClanTag[0]}</span>
+                <span className="text-blue-600 font-bold">
+                  {game.homeClanTag?.[0] ?? game.homeClanName?.[0] ?? "Э"}
+                </span>
               </div>
               <div className="font-medium text-sm">{game.homeClanName}</div>
-              <div className="text-xs text-muted-foreground">[{game.homeClanTag}]</div>
+              {game.homeClanTag && (
+                <div className="text-xs text-muted-foreground">[{game.homeClanTag}]</div>
+              )}
             </div>
           </div>
 

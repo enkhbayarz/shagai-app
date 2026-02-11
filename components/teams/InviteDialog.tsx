@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, User, Link2, Check, Clock } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -17,14 +17,14 @@ import { Button } from "@/components/ui/button";
 interface InviteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  clanId: Id<"clans">;
+  teamId: Id<"clans">;
   inviteCode: string;
 }
 
 export function InviteDialog({
   open,
   onOpenChange,
-  clanId,
+  teamId,
   inviteCode,
 }: InviteDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,31 +34,37 @@ export function InviteDialog({
   const [inviteError, setInviteError] = useState("");
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
+
   const searchResults = useQuery(
     api.users.search,
     searchQuery.length >= 2 ? { query: searchQuery } : "skip"
   );
 
-  const pendingInvites = useQuery(api.clans.getClanInvites, { clanId });
+  const pendingInvites = useQuery(api.teams.getTeamInvites, { teamId });
 
-  const inviteMutation = useMutation(api.clans.invite);
+  const inviteMutation = useMutation(api.teams.invite);
 
   const handleInvite = useCallback(async (userId: Id<"users">) => {
     if (invitingUserId) return;
     setInviteError("");
     setInvitingUserId(userId);
     try {
-      await inviteMutation({ clanId, inviteeId: userId });
+      await inviteMutation({ teamId, inviteeId: userId });
       setSentTo((prev) => new Set(prev).add(userId));
     } catch (error: any) {
       setInviteError(error.message || "Урилга илгээхэд алдаа гарлаа");
     } finally {
       setInvitingUserId(null);
     }
-  }, [invitingUserId, inviteMutation, clanId]);
+  }, [invitingUserId, inviteMutation, teamId]);
 
   const handleCopyLink = useCallback(async () => {
-    const url = `${window.location.origin}/clans/join/${inviteCode}`;
+    const url = `${window.location.origin}/teams/join/${inviteCode}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -78,7 +84,7 @@ export function InviteDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl tracking-wider">
-            Гишүүн урих
+            Харваач урих
           </DialogTitle>
         </DialogHeader>
 

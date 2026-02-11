@@ -10,13 +10,13 @@
 
 import type * as auth from "../auth.js";
 import type * as backfill from "../backfill.js";
-import type * as clans from "../clans.js";
 import type * as dashboard from "../dashboard.js";
 import type * as games from "../games.js";
 import type * as profiles from "../profiles.js";
 import type * as settings from "../settings.js";
 import type * as stats from "../stats.js";
 import type * as teamGames from "../teamGames.js";
+import type * as teams from "../teams.js";
 import type * as users from "../users.js";
 
 import type {
@@ -28,13 +28,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   backfill: typeof backfill;
-  clans: typeof clans;
   dashboard: typeof dashboard;
   games: typeof games;
   profiles: typeof profiles;
   settings: typeof settings;
   stats: typeof stats;
   teamGames: typeof teamGames;
+  teams: typeof teams;
   users: typeof users;
 }>;
 

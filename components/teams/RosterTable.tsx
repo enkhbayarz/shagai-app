@@ -84,7 +84,7 @@ export function RosterTable({
                   : ""
               }`}
             >
-              {member.role === "leader" ? "Удирдагч" : "Гишүүн"}
+              {member.role === "leader" ? "Ахлагч" : "Харваач"}
             </Badge>
           </span>
 
@@ -98,7 +98,9 @@ export function RosterTable({
             {member.avgScore}
           </span>
           <span className="w-20 text-right text-xs text-muted-foreground">
-            {new Date(member.joinedAt).toLocaleDateString("mn-MN")}
+            {member.joinedAt > 0
+              ? new Date(member.joinedAt).toLocaleDateString("mn-MN")
+              : "—"}
           </span>
 
           {isLeader && currentUserId && member.userId !== currentUserId && onKick ? (

@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Id } from "@/convex/_generated/dataModel";
 
-interface ClanCardProps {
-  clan: {
+interface TeamCardProps {
+  team: {
     _id: Id<"clans">;
     name: string;
     tag: string;
@@ -20,7 +20,7 @@ interface ClanCardProps {
   index: number;
 }
 
-export function ClanCard({ clan, index }: ClanCardProps) {
+export function TeamCard({ team, index }: TeamCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -35,27 +35,27 @@ export function ClanCard({ clan, index }: ClanCardProps) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-medium truncate">{clan.name}</h3>
+                <h3 className="font-medium truncate">{team.name}</h3>
                 <Badge variant="secondary" className="text-xs">
-                  {clan.tag}
+                  {team.tag}
                 </Badge>
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {clan.memberCount}/50
+                  {team.memberCount}/50
                 </span>
               </div>
             </div>
           </div>
 
-          {clan.description && (
+          {team.description && (
             <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-              {clan.description}
+              {team.description}
             </p>
           )}
 
-          <Link href={`/clans/${clan._id}`}>
+          <Link href={`/teams/${team._id}`}>
             <Button
               variant="outline"
               size="sm"

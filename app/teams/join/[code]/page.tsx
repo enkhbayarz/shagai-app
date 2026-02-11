@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function JoinClanPage() {
+export default function JoinTeamPage() {
   const params = useParams();
   const router = useRouter();
   const code = params.code as string;
@@ -28,12 +28,12 @@ export default function JoinClanPage() {
     clerkUser ? {} : "skip"
   );
 
-  const clan = useQuery(api.clans.getByInviteCode, { inviteCode: code });
+  const team = useQuery(api.teams.getByInviteCode, { inviteCode: code });
   const members = useQuery(
-    api.clans.getMembers,
-    clan?._id ? { clanId: clan._id } : "skip"
+    api.teams.getMembers,
+    team?._id ? { teamId: team._id } : "skip"
   );
-  const joinByCode = useMutation(api.clans.joinByCode);
+  const joinByCode = useMutation(api.teams.joinByCode);
 
   const isAlreadyMember =
     currentUser?._id && members
@@ -46,12 +46,12 @@ export default function JoinClanPage() {
     setIsJoining(true);
 
     try {
-      const clanId = await joinByCode({
+      const teamId = await joinByCode({
         inviteCode: code,
       });
       setJoined(true);
       setTimeout(() => {
-        router.push(`/clans/${clanId}`);
+        router.push(`/teams/${teamId}`);
       }, 1000);
     } catch (err: any) {
       setError(err.message || "Алдаа гарлаа");
@@ -60,7 +60,7 @@ export default function JoinClanPage() {
   };
 
   // Loading
-  if (!isLoaded || clan === undefined) {
+  if (!isLoaded || team === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6">
         <div className="w-full max-w-sm space-y-6 text-center">
@@ -74,15 +74,15 @@ export default function JoinClanPage() {
   }
 
   // Not found
-  if (clan === null) {
+  if (team === null) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
         <Shield className="w-16 h-16 text-gray-300" />
         <p className="text-muted-foreground">
           Урилга олдсонгүй эсвэл хүчинтэй бус байна
         </p>
-        <Link href="/clans">
-          <Button>Кланууд руу буцах</Button>
+        <Link href="/teams">
+          <Button>Багууд руу буцах</Button>
         </Link>
       </div>
     );
@@ -102,32 +102,32 @@ export default function JoinClanPage() {
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold">{clan.name}</h1>
+              <h1 className="text-2xl font-bold">{team.name}</h1>
               <Badge variant="secondary" className="mt-2">
-                {clan.tag}
+                {team.tag}
               </Badge>
             </div>
 
             <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
               <span>
-                {clan.memberCount}/50 гишүүн
+                {team.memberCount}/50 харваач
               </span>
             </div>
 
             {isAlreadyMember ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Та аль хэдийн энэ кланд нэгдсэн байна
+                  Та аль хэдийн энэ багт нэгдсэн байна
                 </p>
-                <Link href={`/clans/${clan._id}`}>
+                <Link href={`/teams/${team._id}`}>
                   <Button className="w-full h-12 bg-black text-white hover:bg-black/90 touch-manipulation">
-                    Клан руу очих
+                    Баг руу очих
                   </Button>
                 </Link>
               </div>
-            ) : clan.memberCount >= 50 ? (
-              <p className="text-sm text-red-500">Клан дүүрсэн байна</p>
+            ) : team.memberCount >= 50 ? (
+              <p className="text-sm text-red-500">Баг дүүрсэн байна</p>
             ) : !clerkUser ? (
               <SignInButton mode="modal">
                 <Button className="w-full h-12 bg-black text-white hover:bg-black/90 touch-manipulation">

@@ -2,6 +2,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUser, getOptionalAuthUser } from "./auth";
 
+// Teams backend - uses same database tables (clans, clanMembers, clanInvites)
+// but exported as api.teams.* for consistent "team" naming
+
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = new Uint8Array(8);
@@ -13,7 +16,7 @@ function generateCode(): string {
   return code;
 }
 
-// Create a new clan
+// Create a new team
 export const create = mutation({
   args: {
     name: v.string(),
@@ -55,7 +58,7 @@ export const create = mutation({
       throw new Error("Failed to generate unique invite code. Please try again.");
     }
 
-    const clanId = await ctx.db.insert("clans", {
+    const teamId = await ctx.db.insert("clans", {
       name: args.name,
       tag: args.tag,
       description: args.description,
@@ -66,20 +69,20 @@ export const create = mutation({
 
     // Add creator as leader
     await ctx.db.insert("clanMembers", {
-      clanId,
+      clanId: teamId,
       userId: user._id,
       role: "leader",
       joinedAt: Date.now(),
     });
 
-    return clanId;
+    return teamId;
   },
 });
 
 // Send an invite to a user
 export const invite = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
     inviteeId: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -89,18 +92,18 @@ export const invite = mutation({
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", user._id)
+        q.eq("clanId", args.teamId).eq("userId", user._id)
       )
       .first();
     if (!membership) {
-      throw new Error("You are not a member of this clan");
+      throw new Error("You are not a member of this team");
     }
 
     // Check invitee isn't already a member
     const existingMember = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.inviteeId)
+        q.eq("clanId", args.teamId).eq("userId", args.inviteeId)
       )
       .first();
     if (existingMember) {
@@ -110,7 +113,7 @@ export const invite = mutation({
     // Check for existing pending invite
     const existingInvite = await ctx.db
       .query("clanInvites")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .filter((q) =>
         q.and(
           q.eq(q.field("inviteeId"), args.inviteeId),
@@ -125,14 +128,14 @@ export const invite = mutation({
     // Check member limit
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
     if (members.length >= 50) {
-      throw new Error("Clan is full (50 members max)");
+      throw new Error("Team is full (50 members max)");
     }
 
     return await ctx.db.insert("clanInvites", {
-      clanId: args.clanId,
+      clanId: args.teamId,
       inviterId: user._id,
       inviteeId: args.inviteeId,
       status: "pending",
@@ -160,7 +163,7 @@ export const acceptInvite = mutation({
       .withIndex("by_clan", (q) => q.eq("clanId", invite.clanId))
       .collect();
     if (members.length >= 50) {
-      throw new Error("Clan is full");
+      throw new Error("Team is full");
     }
 
     // Check not already a member
@@ -202,10 +205,10 @@ export const declineInvite = mutation({
   },
 });
 
-// Leave a clan
+// Leave a team
 export const leave = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
@@ -213,7 +216,7 @@ export const leave = mutation({
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", user._id)
+        q.eq("clanId", args.teamId).eq("userId", user._id)
       )
       .first();
     if (!membership) {
@@ -224,28 +227,28 @@ export const leave = mutation({
       // Find other members
       const allMembers = await ctx.db
         .query("clanMembers")
-        .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+        .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
         .collect();
       const others = allMembers.filter((m) => m.userId !== user._id);
 
       if (others.length === 0) {
-        // No other members - delete the clan
+        // No other members - delete the team
         const invites = await ctx.db
           .query("clanInvites")
-          .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+          .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
           .collect();
         for (const inv of invites) {
           await ctx.db.delete(inv._id);
         }
         await ctx.db.delete(membership._id);
-        await ctx.db.delete(args.clanId);
+        await ctx.db.delete(args.teamId);
         return;
       }
 
       // Transfer leadership to oldest member
       const oldest = others.sort((a, b) => a.joinedAt - b.joinedAt)[0];
       await ctx.db.patch(oldest._id, { role: "leader" });
-      await ctx.db.patch(args.clanId, { creatorId: oldest.userId });
+      await ctx.db.patch(args.teamId, { creatorId: oldest.userId });
     }
 
     await ctx.db.delete(membership._id);
@@ -255,7 +258,7 @@ export const leave = mutation({
 // Kick a member (leader only)
 export const kick = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
     targetUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -265,7 +268,7 @@ export const kick = mutation({
     const leaderMembership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", user._id)
+        q.eq("clanId", args.teamId).eq("userId", user._id)
       )
       .first();
     if (!leaderMembership || leaderMembership.role !== "leader") {
@@ -276,7 +279,7 @@ export const kick = mutation({
     const targetMembership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", args.targetUserId)
+        q.eq("clanId", args.teamId).eq("userId", args.targetUserId)
       )
       .first();
     if (!targetMembership) {
@@ -290,23 +293,23 @@ export const kick = mutation({
   },
 });
 
-// Delete a clan (creator only)
-export const deleteClan = mutation({
+// Delete a team (creator only)
+export const deleteTeam = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
 
-    const clan = await ctx.db.get(args.clanId);
-    if (!clan || clan.creatorId !== user._id) {
-      throw new Error("Only the creator can delete the clan");
+    const team = await ctx.db.get(args.teamId);
+    if (!team || team.creatorId !== user._id) {
+      throw new Error("Only the creator can delete the team");
     }
 
     // Delete all members
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
     for (const m of members) {
       await ctx.db.delete(m._id);
@@ -315,20 +318,20 @@ export const deleteClan = mutation({
     // Delete all invites
     const invites = await ctx.db
       .query("clanInvites")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
     for (const inv of invites) {
       await ctx.db.delete(inv._id);
     }
 
-    await ctx.db.delete(args.clanId);
+    await ctx.db.delete(args.teamId);
   },
 });
 
 // Regenerate invite code (leader only)
 export const regenerateInviteCode = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
@@ -336,7 +339,7 @@ export const regenerateInviteCode = mutation({
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", user._id)
+        q.eq("clanId", args.teamId).eq("userId", user._id)
       )
       .first();
     if (!membership || membership.role !== "leader") {
@@ -360,12 +363,12 @@ export const regenerateInviteCode = mutation({
       throw new Error("Failed to generate unique invite code. Please try again.");
     }
 
-    await ctx.db.patch(args.clanId, { inviteCode: newCode });
+    await ctx.db.patch(args.teamId, { inviteCode: newCode });
     return newCode;
   },
 });
 
-// Join a clan by invite code
+// Join a team by invite code
 export const joinByCode = mutation({
   args: {
     inviteCode: v.string(),
@@ -373,11 +376,11 @@ export const joinByCode = mutation({
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
 
-    const clan = await ctx.db
+    const team = await ctx.db
       .query("clans")
       .withIndex("by_invite_code", (q) => q.eq("inviteCode", args.inviteCode))
       .first();
-    if (!clan) {
+    if (!team) {
       throw new Error("Invalid invite code");
     }
 
@@ -385,7 +388,7 @@ export const joinByCode = mutation({
     const existing = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", clan._id).eq("userId", user._id)
+        q.eq("clanId", team._id).eq("userId", user._id)
       )
       .first();
     if (existing) {
@@ -395,45 +398,45 @@ export const joinByCode = mutation({
     // Check member limit
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
+      .withIndex("by_clan", (q) => q.eq("clanId", team._id))
       .collect();
     if (members.length >= 50) {
-      throw new Error("Clan is full (50 members max)");
+      throw new Error("Team is full (50 members max)");
     }
 
     await ctx.db.insert("clanMembers", {
-      clanId: clan._id,
+      clanId: team._id,
       userId: user._id,
       role: "member",
       joinedAt: Date.now(),
     });
 
-    return clan._id;
+    return team._id;
   },
 });
 
-// List all clans with member counts (public, strips inviteCode)
+// List all teams with member counts (public, strips inviteCode)
 export const list = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
-    const clans = await ctx.db.query("clans").order("desc").take(limit);
+    const teams = await ctx.db.query("clans").order("desc").take(limit);
 
     const results = await Promise.all(
-      clans.map(async (clan) => {
+      teams.map(async (team) => {
         const members = await ctx.db
           .query("clanMembers")
-          .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
+          .withIndex("by_clan", (q) => q.eq("clanId", team._id))
           .collect();
-        const creator = await ctx.db.get(clan.creatorId);
+        const creator = await ctx.db.get(team.creatorId);
         return {
-          _id: clan._id,
-          _creationTime: clan._creationTime,
-          name: clan.name,
-          tag: clan.tag,
-          description: clan.description,
-          creatorId: clan.creatorId,
-          createdAt: clan.createdAt,
+          _id: team._id,
+          _creationTime: team._creationTime,
+          name: team.name,
+          tag: team.tag,
+          description: team.description,
+          creatorId: team.creatorId,
+          createdAt: team.createdAt,
           memberCount: members.length,
           creatorName: creator?.username ?? "unknown",
         };
@@ -444,74 +447,74 @@ export const list = query({
   },
 });
 
-// Get a single clan with details (inviteCode only for members)
+// Get a single team with details (inviteCode only for members)
 export const get = query({
   args: { id: v.id("clans") },
   handler: async (ctx, args) => {
-    const clan = await ctx.db.get(args.id);
-    if (!clan) return null;
+    const team = await ctx.db.get(args.id);
+    if (!team) return null;
 
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
+      .withIndex("by_clan", (q) => q.eq("clanId", team._id))
       .collect();
-    const creator = await ctx.db.get(clan.creatorId);
+    const creator = await ctx.db.get(team.creatorId);
 
-    // Only include inviteCode if the requester is a clan member
+    // Only include inviteCode if the requester is a team member
     const user = await getOptionalAuthUser(ctx);
     const isMember = user
       ? members.some((m) => m.userId === user._id)
       : false;
 
     return {
-      _id: clan._id,
-      _creationTime: clan._creationTime,
-      name: clan.name,
-      tag: clan.tag,
-      description: clan.description,
-      creatorId: clan.creatorId,
-      createdAt: clan.createdAt,
+      _id: team._id,
+      _creationTime: team._creationTime,
+      name: team.name,
+      tag: team.tag,
+      description: team.description,
+      creatorId: team.creatorId,
+      createdAt: team.createdAt,
       memberCount: members.length,
       creatorName: creator?.username ?? "unknown",
-      ...(isMember && { inviteCode: clan.inviteCode }),
+      ...(isMember && { inviteCode: team.inviteCode }),
     };
   },
 });
 
-// Get clan by invite code (public, strips inviteCode)
+// Get team by invite code (public, strips inviteCode)
 export const getByInviteCode = query({
   args: { inviteCode: v.string() },
   handler: async (ctx, args) => {
-    const clan = await ctx.db
+    const team = await ctx.db
       .query("clans")
       .withIndex("by_invite_code", (q) => q.eq("inviteCode", args.inviteCode))
       .first();
-    if (!clan) return null;
+    if (!team) return null;
 
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
+      .withIndex("by_clan", (q) => q.eq("clanId", team._id))
       .collect();
 
     return {
-      _id: clan._id,
-      _creationTime: clan._creationTime,
-      name: clan.name,
-      tag: clan.tag,
-      description: clan.description,
-      createdAt: clan.createdAt,
+      _id: team._id,
+      _creationTime: team._creationTime,
+      name: team.name,
+      tag: team.tag,
+      description: team.description,
+      createdAt: team.createdAt,
       memberCount: members.length,
     };
   },
 });
 
-// Get all members of a clan with user info
+// Get all members of a team with user info
 export const getMembers = query({
-  args: { clanId: v.id("clans") },
+  args: { teamId: v.id("clans") },
   handler: async (ctx, args) => {
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
 
     const results = await Promise.all(
@@ -539,11 +542,11 @@ export const getMembers = query({
 
 // Get member stats (total games, total hits, avg score for each member)
 export const getMemberStats = query({
-  args: { clanId: v.id("clans") },
+  args: { teamId: v.id("clans") },
   handler: async (ctx, args) => {
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
 
     const memberUserIds = new Set(members.map((m) => m.userId));
@@ -592,8 +595,8 @@ export const getMemberStats = query({
   },
 });
 
-// Get clans the current user belongs to (auth required, strips inviteCode)
-export const myClans = query({
+// Get teams the current user belongs to (auth required, strips inviteCode)
+export const myTeams = query({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthUser(ctx);
@@ -605,20 +608,20 @@ export const myClans = query({
 
     const results = await Promise.all(
       memberships.map(async (m) => {
-        const clan = await ctx.db.get(m.clanId);
-        if (!clan) return null;
+        const team = await ctx.db.get(m.clanId);
+        if (!team) return null;
         const members = await ctx.db
           .query("clanMembers")
-          .withIndex("by_clan", (q) => q.eq("clanId", clan._id))
+          .withIndex("by_clan", (q) => q.eq("clanId", team._id))
           .collect();
         return {
-          _id: clan._id,
-          _creationTime: clan._creationTime,
-          name: clan.name,
-          tag: clan.tag,
-          description: clan.description,
-          creatorId: clan.creatorId,
-          createdAt: clan.createdAt,
+          _id: team._id,
+          _creationTime: team._creationTime,
+          name: team.name,
+          tag: team.tag,
+          description: team.description,
+          creatorId: team.creatorId,
+          createdAt: team.createdAt,
           memberCount: members.length,
           myRole: m.role,
         };
@@ -644,13 +647,13 @@ export const myInvites = query({
 
     const results = await Promise.all(
       invites.map(async (inv) => {
-        const clan = await ctx.db.get(inv.clanId);
+        const team = await ctx.db.get(inv.clanId);
         const inviter = await ctx.db.get(inv.inviterId);
         return {
           _id: inv._id,
-          clanId: inv.clanId,
-          clanName: clan?.name ?? "Unknown",
-          clanTag: clan?.tag ?? "???",
+          teamId: inv.clanId,
+          teamName: team?.name ?? "Unknown",
+          teamTag: team?.tag ?? "???",
           inviterName: inviter?.fullName ?? "Unknown",
           createdAt: inv.createdAt,
         };
@@ -661,26 +664,26 @@ export const myInvites = query({
   },
 });
 
-// Get pending invites for a specific clan (auth required, must be member)
-export const getClanInvites = query({
-  args: { clanId: v.id("clans") },
+// Get pending invites for a specific team (auth required, must be member)
+export const getTeamInvites = query({
+  args: { teamId: v.id("clans") },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
 
-    // Verify requester is a clan member
+    // Verify requester is a team member
     const membership = await ctx.db
       .query("clanMembers")
       .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.clanId).eq("userId", user._id)
+        q.eq("clanId", args.teamId).eq("userId", user._id)
       )
       .first();
     if (!membership) {
-      throw new Error("You are not a member of this clan");
+      throw new Error("You are not a member of this team");
     }
 
     const invites = await ctx.db
       .query("clanInvites")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .filter((q) => q.eq(q.field("status"), "pending"))
       .collect();
 
@@ -701,15 +704,15 @@ export const getClanInvites = query({
   },
 });
 
-// Auto-detect clan matches: games where ALL players are clan members
-export const getClanMatches = query({
-  args: { clanId: v.id("clans"), limit: v.optional(v.number()) },
+// Auto-detect team matches: games where ALL players are team members
+export const getTeamMatches = query({
+  args: { teamId: v.id("clans"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 10;
 
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
     const memberUserIds = new Set(members.map((m) => m.userId));
 
@@ -722,15 +725,15 @@ export const getClanMatches = query({
       .order("desc")
       .take(200);
 
-    const clanMatches = [];
+    const teamMatches = [];
     for (const game of recentGames) {
-      const allClanMembers =
+      const allTeamMembers =
         game.players.length > 0 &&
         game.players.every(
           (p) => p.userId && memberUserIds.has(p.userId)
         );
-      if (allClanMembers) {
-        clanMatches.push({
+      if (allTeamMembers) {
+        teamMatches.push({
           _id: game._id,
           startedAt: game.startedAt,
           finishedAt: game.finishedAt,
@@ -742,17 +745,17 @@ export const getClanMatches = query({
           })),
         });
       }
-      if (clanMatches.length >= limit) break;
+      if (teamMatches.length >= limit) break;
     }
 
-    return clanMatches;
+    return teamMatches;
   },
 });
 
-// Add test players to a clan (admin only, for testing purposes)
+// Add test players to a team (admin only, for testing purposes)
 export const addTestPlayers = mutation({
   args: {
-    clanId: v.id("clans"),
+    teamId: v.id("clans"),
     count: v.number(),
   },
   handler: async (ctx, args) => {
@@ -767,20 +770,20 @@ export const addTestPlayers = mutation({
       throw new Error("Count must be between 1 and 10");
     }
 
-    // Verify clan exists
-    const clan = await ctx.db.get(args.clanId);
-    if (!clan) {
-      throw new Error("Clan not found");
+    // Verify team exists
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
     }
 
     // Check current member count to avoid exceeding limit
     const currentMembers = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
 
     if (currentMembers.length + args.count > 50) {
-      throw new Error(`Cannot add ${args.count} players. Clan would exceed 50 member limit.`);
+      throw new Error(`Cannot add ${args.count} players. Team would exceed 50 member limit.`);
     }
 
     const testNames = [
@@ -803,9 +806,9 @@ export const addTestPlayers = mutation({
         createdAt: Date.now(),
       });
 
-      // Add to clan
+      // Add to team
       await ctx.db.insert("clanMembers", {
-        clanId: args.clanId,
+        clanId: args.teamId,
         userId,
         role: "member",
         joinedAt: Date.now(),
@@ -818,13 +821,13 @@ export const addTestPlayers = mutation({
   },
 });
 
-// Get aggregate clan stats
-export const getClanStats = query({
-  args: { clanId: v.id("clans") },
+// Get aggregate team stats
+export const getTeamStats = query({
+  args: { teamId: v.id("clans") },
   handler: async (ctx, args) => {
     const members = await ctx.db
       .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.clanId))
+      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
       .collect();
     const memberUserIds = new Set(members.map((m) => m.userId));
 
@@ -832,7 +835,7 @@ export const getClanStats = query({
       return { memberCount: 0, totalMatches: 0, avgScore: 0 };
     }
 
-    // Scan finished games for clan matches
+    // Scan finished games for team matches
     const finishedGames = await ctx.db
       .query("games")
       .withIndex("by_finished", (q) => q.eq("isFinished", true))
@@ -844,12 +847,12 @@ export const getClanStats = query({
     let totalPlayers = 0;
 
     for (const game of finishedGames) {
-      const allClanMembers =
+      const allTeamMembers =
         game.players.length > 0 &&
         game.players.every(
           (p) => p.userId && memberUserIds.has(p.userId)
         );
-      if (allClanMembers) {
+      if (allTeamMembers) {
         totalMatches++;
         for (const p of game.players) {
           totalScore += p.shots.filter((s) => s === true).length;

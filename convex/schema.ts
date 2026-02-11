@@ -147,22 +147,27 @@ export default defineSchema({
 
   // Team games table - stores team match sessions
   teamGames: defineTable({
-    // Teams (linked to clans)
-    homeClanId: v.id("clans"),
-    awayClanId: v.id("clans"),
+    // Teams - optional clan links (can play without creating teams first)
+    homeClanId: v.optional(v.id("clans")),
+    awayClanId: v.optional(v.id("clans")),
+    // Team names (optional for backward compatibility - new games always have these)
+    homeTeamName: v.optional(v.string()), // "Эзэн баг" or actual team name
+    awayTeamName: v.optional(v.string()), // "Зочин баг" or actual team name
+    homeTeamTag: v.optional(v.string()), // Optional tag from clan
+    awayTeamTag: v.optional(v.string()), // Optional tag from clan
     playersPerTeam: v.union(v.literal(4), v.literal(5), v.literal(6)),
 
     // Metadata
-    creatorId: v.id("users"),
+    creatorId: v.optional(v.id("users")), // Optional - can play without login
     startedAt: v.number(),
     finishedAt: v.optional(v.number()),
 
-    // Team rosters - players selected from each clan
+    // Team rosters - players with optional user links
     homeTeam: v.object({
       players: v.array(
         v.object({
-          userId: v.id("users"),
-          name: v.string(),
+          userId: v.optional(v.id("users")), // Optional - null for placeholder players
+          name: v.string(), // "Тоглогч 1" or actual name
           isSubstitute: v.boolean(), // true = substitute player slot
           replacedPlayerIndex: v.optional(v.number()), // index of player replaced (if sub entered)
         })
@@ -171,8 +176,8 @@ export default defineSchema({
     awayTeam: v.object({
       players: v.array(
         v.object({
-          userId: v.id("users"),
-          name: v.string(),
+          userId: v.optional(v.id("users")), // Optional - null for placeholder players
+          name: v.string(), // "Тоглогч 1" or actual name
           isSubstitute: v.boolean(),
           replacedPlayerIndex: v.optional(v.number()),
         })
@@ -270,8 +275,9 @@ export default defineSchema({
   // Team game participants - individual player stats per team game
   teamGameParticipants: defineTable({
     teamGameId: v.id("teamGames"),
-    userId: v.id("users"),
-    clanId: v.id("clans"),
+    userId: v.optional(v.id("users")), // Optional for placeholder players
+    clanId: v.optional(v.id("clans")), // Optional when playing without teams
+    playerName: v.string(), // Always store name for display
     team: v.union(v.literal("home"), v.literal("away")),
     totalShots: v.number(),
     totalHits: v.number(),
@@ -282,10 +288,7 @@ export default defineSchema({
     wasSubstitute: v.boolean(),
     wonMatch: v.boolean(),
   })
-    .index("by_user", ["userId"])
-    .index("by_game", ["teamGameId"])
-    .index("by_clan", ["clanId"])
-    .index("by_user_game", ["userId", "teamGameId"]),
+    .index("by_game", ["teamGameId"]),
 
   // Team stats - aggregated statistics per clan for team games
   teamStats: defineTable({

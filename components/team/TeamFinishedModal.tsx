@@ -99,7 +99,7 @@ export function TeamFinishedModal({
             {/* Winner Announcement */}
             <h2 className="text-2xl font-bold text-center mb-1">Тоглолт дууслаа!</h2>
             <p className={`text-center text-lg font-medium ${winnerColor} mb-4`}>
-              [{winnerTag}] {winnerName} ялав!
+              {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} ялав!
             </p>
 
             {/* Golden Point Badge */}
@@ -117,13 +117,17 @@ export function TeamFinishedModal({
                 {/* Away Team */}
                 <div>
                   <div className="text-xs text-orange-500 font-medium">Зочин</div>
-                  <div className="font-medium text-sm">[{awayClanTag}]</div>
+                  <div className="font-medium text-sm truncate">
+                    {awayClanTag ? `[${awayClanTag}]` : awayClanName}
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground">VS</div>
                 {/* Home Team */}
                 <div>
                   <div className="text-xs text-blue-500 font-medium">Эзэн</div>
-                  <div className="font-medium text-sm">[{homeClanTag}]</div>
+                  <div className="font-medium text-sm truncate">
+                    {homeClanTag ? `[${homeClanTag}]` : homeClanName}
+                  </div>
                 </div>
               </div>
 

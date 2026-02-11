@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Trophy, Calendar } from "lucide-react";
 
-interface ClanMatchProps {
+interface TeamMatchProps {
   match: {
     _id: string;
     startedAt: number;
@@ -17,7 +17,7 @@ interface ClanMatchProps {
   };
 }
 
-export function ClanMatchCard({ match }: ClanMatchProps) {
+export function TeamMatchCard({ match }: TeamMatchProps) {
   if (match.players.length === 0) return null;
 
   const maxScore = Math.max(...match.players.map((p) => p.score));

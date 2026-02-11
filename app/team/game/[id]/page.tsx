@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X, Search, User } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   TeamScoreHeader,
   PhaseSection,
@@ -20,6 +21,13 @@ export default function TeamGamePage() {
   const params = useParams();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<{
+    team: "home" | "away";
+    playerIndex: number;
+    currentName: string;
+  } | null>(null);
+  const [editPlayerName, setEditPlayerName] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | undefined>(undefined);
 
   // Validate route param before casting
   const rawId = params.id;
@@ -37,6 +45,14 @@ export default function TeamGamePage() {
   const game = useQuery(api.teamGames.get, { id: gameId });
   const recordShot = useMutation(api.teamGames.recordShot);
   const editShot = useMutation(api.teamGames.editShot);
+  const updateTeamName = useMutation(api.teamGames.updateTeamName);
+  const updatePlayerName = useMutation(api.teamGames.updatePlayerName);
+
+  // Search users for player name editing
+  const searchResults = useQuery(
+    api.users.search,
+    editPlayerName.length >= 2 && editingPlayer ? { query: editPlayerName } : "skip"
+  );
 
   // Auto-scroll to active phase
   useEffect(() => {
@@ -110,6 +126,56 @@ export default function TeamGamePage() {
     }
   };
 
+  // Handle team name editing
+  const handleEditTeamName = async (team: "home" | "away", name: string) => {
+    try {
+      await updateTeamName({ gameId, team, name });
+    } catch (error) {
+      console.error("Failed to update team name:", error);
+    }
+  };
+
+  // Handle player name editing - open modal
+  const handleOpenEditPlayerName = (team: "home" | "away", playerIndex: number) => {
+    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    const currentName = players[playerIndex]?.name ?? `Тоглогч ${playerIndex + 1}`;
+    setEditingPlayer({ team, playerIndex, currentName });
+    setEditPlayerName(currentName);
+    setSelectedUserId(undefined);
+  };
+
+  // Handle selecting a user from search results
+  const handleSelectUser = (userId: Id<"users">, fullName: string) => {
+    setEditPlayerName(fullName);
+    setSelectedUserId(userId);
+  };
+
+  // Handle player name save
+  const handleSavePlayerName = async () => {
+    if (!editingPlayer || !editPlayerName.trim()) return;
+    try {
+      await updatePlayerName({
+        gameId,
+        team: editingPlayer.team,
+        playerIndex: editingPlayer.playerIndex,
+        name: editPlayerName.trim(),
+        userId: selectedUserId,
+      });
+      setEditingPlayer(null);
+      setEditPlayerName("");
+      setSelectedUserId(undefined);
+    } catch (error) {
+      console.error("Failed to update player name:", error);
+    }
+  };
+
+  // Close edit modal
+  const handleCloseEditModal = () => {
+    setEditingPlayer(null);
+    setEditPlayerName("");
+    setSelectedUserId(undefined);
+  };
+
   const isFinished = game.status === "finished";
   const isGoldenPoint = game.goldenPoint?.isActive;
 
@@ -152,6 +218,7 @@ export default function TeamGamePage() {
                 }
               : undefined
           }
+          onEditTeamName={!isFinished ? handleEditTeamName : undefined}
         />
       </div>
 
@@ -187,6 +254,7 @@ export default function TeamGamePage() {
                         handleEditShot(game.currentSet - 1, phaseIndex, shooterIndex, shotIndex)
                     : undefined
                 }
+                onEditPlayerName={!isFinished ? handleOpenEditPlayerName : undefined}
               />
             </div>
           );
@@ -242,6 +310,107 @@ export default function TeamGamePage() {
           gameId={gameId}
         />
       )}
+
+      {/* Edit Player Name Modal */}
+      <AnimatePresence>
+        {editingPlayer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={handleCloseEditModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Тоглогчийн нэр засах</h3>
+                <button
+                  onClick={handleCloseEditModal}
+                  className="p-1 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="text-sm text-muted-foreground mb-2">
+                  {editingPlayer.team === "home" ? "Эзэн баг" : "Зочин баг"} - Тоглогч {editingPlayer.playerIndex + 1}
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={editPlayerName}
+                    onChange={(e) => {
+                      setEditPlayerName(e.target.value);
+                      setSelectedUserId(undefined); // Clear selection when typing
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleSavePlayerName()}
+                    placeholder="Нэр хайх эсвэл бичих..."
+                    className="pl-10"
+                    autoFocus
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchResults && searchResults.length > 0 && !selectedUserId && (
+                <div className="border rounded-lg overflow-hidden max-h-40 overflow-y-auto mb-4">
+                  {searchResults.slice(0, 5).map((user) => (
+                    <button
+                      key={user._id}
+                      onClick={() => handleSelectUser(user._id, user.fullName)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 border-b last:border-b-0 hover:bg-gray-50 text-left"
+                    >
+                      <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{user.fullName}</div>
+                        <div className="text-xs text-muted-foreground truncate">@{user.username}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {editPlayerName.length >= 2 && searchResults && searchResults.length === 0 && !selectedUserId && (
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  Хэрэглэгч олдсонгүй. Шууд нэр оруулна уу.
+                </p>
+              )}
+
+              {selectedUserId && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 mb-4">
+                  <User className="w-4 h-4" />
+                  <span>Бүртгэлтэй хэрэглэгч сонгогдлоо</span>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleCloseEditModal}
+                >
+                  Болих
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleSavePlayerName}
+                  disabled={!editPlayerName.trim()}
+                >
+                  Хадгалах
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

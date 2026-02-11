@@ -24,7 +24,7 @@ import { api } from "@/convex/_generated/api";
 const navItems = [
   { icon: Home, label: "Нүүр", href: "/" },
   { icon: Radio, label: "Шууд", href: "/live" },
-  { icon: Users, label: "Клан", href: "/clans" },
+  { icon: Users, label: "Баг", href: "/teams" },
   { icon: History, label: "Түүх", href: "/history" },
   { icon: Shield, label: "Админ", href: "/admin" },
 ];

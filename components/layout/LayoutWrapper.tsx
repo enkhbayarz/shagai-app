@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 const FULL_SCREEN_ROUTES = [
   "/s/",
   "/team/s/",
-  "/clans/join",
+  "/teams/join",
 ];
 
 // Routes that should have COLLAPSED sidebar (icon-only)

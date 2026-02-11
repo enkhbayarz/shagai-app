@@ -38,13 +38,8 @@ export default function AdminPage() {
     }
   }, [isLoaded, clerkUser, router]);
 
-  // Loading state
-  if (
-    !isLoaded ||
-    currentUser === undefined ||
-    allGames === undefined ||
-    allUsers === undefined
-  ) {
+  // Loading state - only wait for Clerk and user data, not admin queries
+  if (!isLoaded || currentUser === undefined) {
     return (
       <div className="min-h-screen px-4 py-6">
         <div className="flex items-center justify-between mb-8">
@@ -60,7 +55,7 @@ export default function AdminPage() {
     );
   }
 
-  // Not authorized
+  // Not authorized - show immediately after user loads
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6">
@@ -74,6 +69,26 @@ export default function AdminPage() {
         <Link href="/">
           <Button variant="outline">Нүүр хуудас руу буцах</Button>
         </Link>
+      </div>
+    );
+  }
+
+  // Admin data still loading
+  if (allGames === undefined || allUsers === undefined) {
+    return (
+      <div className="min-h-screen px-4 py-6">
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 mb-8"
+        >
+          <Shield className="w-5 h-5" />
+          <h1 className="font-display text-2xl tracking-wider">АДМИН</h1>
+        </motion.header>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-48 rounded-xl" />
+        </div>
       </div>
     );
   }

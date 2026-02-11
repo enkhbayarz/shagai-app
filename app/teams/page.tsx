@@ -12,18 +12,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClanCard } from "@/components/clans/ClanCard";
+import { TeamCard } from "@/components/teams/TeamCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Tab = "browse" | "my" | "create";
 
-export default function ClansPage() {
+export default function TeamsPage() {
   const router = useRouter();
   const { user: clerkUser, isLoaded } = useUser();
   const [activeTab, setActiveTab] = useState<Tab>("browse");
-  const [clanName, setClanName] = useState("");
-  const [clanTag, setClanTag] = useState("");
-  const [clanDescription, setClanDescription] = useState("");
+  const [teamName, setTeamName] = useState("");
+  const [teamTag, setTeamTag] = useState("");
+  const [teamDescription, setTeamDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -32,21 +32,21 @@ export default function ClansPage() {
     clerkUser ? {} : "skip"
   );
 
-  const allClans = useQuery(api.clans.list, { limit: 50 });
+  const allTeams = useQuery(api.teams.list, { limit: 50 });
 
-  const myClans = useQuery(
-    api.clans.myClans,
+  const myTeams = useQuery(
+    api.teams.myTeams,
     currentUser ? {} : "skip"
   );
 
   const myInvites = useQuery(
-    api.clans.myInvites,
+    api.teams.myInvites,
     currentUser ? {} : "skip"
   );
 
-  const createClan = useMutation(api.clans.create);
-  const acceptInvite = useMutation(api.clans.acceptInvite);
-  const declineInvite = useMutation(api.clans.declineInvite);
+  const createTeam = useMutation(api.teams.create);
+  const acceptInvite = useMutation(api.teams.acceptInvite);
+  const declineInvite = useMutation(api.teams.declineInvite);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -59,8 +59,8 @@ export default function ClansPage() {
     if (!currentUser?._id || isCreating) return;
     setCreateError("");
 
-    const trimmedName = clanName.trim();
-    const trimmedTag = clanTag.trim();
+    const trimmedName = teamName.trim();
+    const trimmedTag = teamTag.trim();
     if (!trimmedName) {
       setCreateError("Нэр оруулна уу");
       return;
@@ -72,12 +72,12 @@ export default function ClansPage() {
 
     setIsCreating(true);
     try {
-      const clanId = await createClan({
+      const teamId = await createTeam({
         name: trimmedName,
         tag: trimmedTag,
-        description: clanDescription.trim() || undefined,
+        description: teamDescription.trim() || undefined,
       });
-      router.push(`/clans/${clanId}`);
+      router.push(`/teams/${teamId}`);
     } catch (error: any) {
       setCreateError(error.message || "Алдаа гарлаа");
       setIsCreating(false);
@@ -103,7 +103,7 @@ export default function ClansPage() {
   };
 
   // Loading state
-  if (!isLoaded || allClans === undefined) {
+  if (!isLoaded || allTeams === undefined) {
     return (
       <div className="min-h-screen px-4 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -126,9 +126,9 @@ export default function ClansPage() {
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "browse", label: "Кланууд" },
-    { key: "my", label: "Миний клан" },
-    { key: "create", label: "Клан үүсгэх" },
+    { key: "browse", label: "Багууд" },
+    { key: "my", label: "Миний баг" },
+    { key: "create", label: "Баг үүсгэх" },
   ];
 
   return (
@@ -140,7 +140,7 @@ export default function ClansPage() {
         className="flex items-center gap-2 mb-6"
       >
         <Shield className="w-5 h-5" />
-        <h1 className="font-display text-2xl tracking-wider">КЛАН</h1>
+        <h1 className="font-display text-2xl tracking-wider">БАГ</h1>
       </motion.header>
 
       <div className="max-w-md mx-auto">
@@ -166,7 +166,7 @@ export default function ClansPage() {
         {/* Browse Tab */}
         {activeTab === "browse" && (
           <div className="space-y-4">
-            {allClans.length === 0 ? (
+            {allTeams.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -174,18 +174,18 @@ export default function ClansPage() {
               >
                 <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Одоогоор клан байхгүй байна
+                  Одоогоор баг байхгүй байна
                 </p>
               </motion.div>
             ) : (
-              allClans.map((clan, index) => (
-                <ClanCard key={clan._id} clan={clan} index={index} />
+              allTeams.map((team, index) => (
+                <TeamCard key={team._id} team={team} index={index} />
               ))
             )}
           </div>
         )}
 
-        {/* My Clans Tab */}
+        {/* My Teams Tab */}
         {activeTab === "my" && (
           <div className="space-y-6">
             {/* Pending Invites */}
@@ -206,10 +206,10 @@ export default function ClansPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
-                                {invite.clanName}
+                                {invite.teamName}
                               </span>
                               <Badge variant="secondary" className="text-xs">
-                                {invite.clanTag}
+                                {invite.teamTag}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
@@ -242,9 +242,9 @@ export default function ClansPage() {
               </div>
             )}
 
-            {/* My Clans List */}
+            {/* My Teams List */}
             <div className="space-y-4">
-              {!myClans || myClans.length === 0 ? (
+              {!myTeams || myTeams.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -252,19 +252,19 @@ export default function ClansPage() {
                 >
                   <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">
-                    Та ямар нэг кланд нэгдээгүй байна
+                    Та ямар нэг багт нэгдээгүй байна
                   </p>
                   <Button onClick={() => setActiveTab("browse")}>
-                    Клан хайх
+                    Баг хайх
                   </Button>
                 </motion.div>
               ) : (
-                myClans.map((clan, index) =>
-                  clan ? (
-                    <ClanCard
-                      key={clan._id}
-                      clan={{
-                        ...clan,
+                myTeams.map((team, index) =>
+                  team ? (
+                    <TeamCard
+                      key={team._id}
+                      team={{
+                        ...team,
                         creatorName: "",
                       }}
                       index={index}
@@ -285,11 +285,11 @@ export default function ClansPage() {
             <Card className="glass">
               <CardContent className="pt-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Кланы нэр</label>
+                  <label className="text-sm font-medium">Багийн нэр</label>
                   <Input
                     placeholder="Жишээ: The InfinityX"
-                    value={clanName}
-                    onChange={(e) => setClanName(e.target.value)}
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
                     maxLength={50}
                   />
                 </div>
@@ -300,8 +300,8 @@ export default function ClansPage() {
                   </label>
                   <Input
                     placeholder="Жишээ: INFYx"
-                    value={clanTag}
-                    onChange={(e) => setClanTag(e.target.value)}
+                    value={teamTag}
+                    onChange={(e) => setTeamTag(e.target.value)}
                     maxLength={6}
                   />
                 </div>
@@ -311,9 +311,9 @@ export default function ClansPage() {
                     Тайлбар (заавал биш)
                   </label>
                   <Input
-                    placeholder="Кланы тухай товч..."
-                    value={clanDescription}
-                    onChange={(e) => setClanDescription(e.target.value)}
+                    placeholder="Багийн тухай товч..."
+                    value={teamDescription}
+                    onChange={(e) => setTeamDescription(e.target.value)}
                     maxLength={200}
                   />
                 </div>
@@ -324,7 +324,7 @@ export default function ClansPage() {
 
                 <Button
                   onClick={handleCreate}
-                  disabled={isCreating || !clanName.trim() || clanTag.length < 2}
+                  disabled={isCreating || !teamName.trim() || teamTag.length < 2}
                   className="w-full h-12 gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
                 >
                   {isCreating ? (
@@ -332,7 +332,7 @@ export default function ClansPage() {
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
-                      КЛАН ҮҮСГЭХ
+                      БАГ ҮҮСГЭХ
                     </>
                   )}
                 </Button>

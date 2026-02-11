@@ -165,115 +165,145 @@ function createInitialPhase(
 // MUTATIONS
 // ============================================
 
-// Create a new team game
+// Create a new team game - supports instant start with placeholders
 export const create = mutation({
   args: {
-    homeClanId: v.id("clans"),
-    awayClanId: v.id("clans"),
-    playersPerTeam: v.union(v.literal(4), v.literal(5), v.literal(6)),
-    homeTeamPlayers: v.array(
-      v.object({
-        userId: v.id("users"),
-        isSubstitute: v.boolean(),
-      })
+    // Optional team links (can play without creating teams first)
+    homeClanId: v.optional(v.id("clans")),
+    awayClanId: v.optional(v.id("clans")),
+    // Team names - defaults will be used if not provided
+    homeTeamName: v.optional(v.string()),
+    awayTeamName: v.optional(v.string()),
+    // Player count (default 4)
+    playersPerTeam: v.optional(v.union(v.literal(4), v.literal(5), v.literal(6))),
+    // Optional player arrays - if not provided, placeholders will be used
+    homeTeamPlayers: v.optional(
+      v.array(
+        v.object({
+          userId: v.optional(v.id("users")),
+          name: v.optional(v.string()),
+          isSubstitute: v.optional(v.boolean()),
+        })
+      )
     ),
-    awayTeamPlayers: v.array(
-      v.object({
-        userId: v.id("users"),
-        isSubstitute: v.boolean(),
-      })
+    awayTeamPlayers: v.optional(
+      v.array(
+        v.object({
+          userId: v.optional(v.id("users")),
+          name: v.optional(v.string()),
+          isSubstitute: v.optional(v.boolean()),
+        })
+      )
     ),
   },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    // Auth is optional - games can be created without login
+    const user = await getOptionalAuthUser(ctx);
 
-    // Validate: user must be a member of home clan
-    const homeMembership = await ctx.db
-      .query("clanMembers")
-      .withIndex("by_clan_and_user", (q) =>
-        q.eq("clanId", args.homeClanId).eq("userId", user._id)
-      )
-      .first();
-    if (!homeMembership) {
-      throw new Error("You must be a member of the home clan to create a game");
+    const playersPerTeam = args.playersPerTeam ?? 4;
+
+    // Generate default team names
+    let homeTeamName = args.homeTeamName ?? "Эзэн баг";
+    let awayTeamName = args.awayTeamName ?? "Зочин баг";
+    let homeTeamTag: string | undefined;
+    let awayTeamTag: string | undefined;
+
+    // If clan IDs provided, fetch clan info
+    if (args.homeClanId) {
+      const homeClan = await ctx.db.get(args.homeClanId);
+      if (homeClan) {
+        homeTeamName = args.homeTeamName ?? homeClan.name;
+        homeTeamTag = homeClan.tag;
+      }
+    }
+    if (args.awayClanId) {
+      const awayClan = await ctx.db.get(args.awayClanId);
+      if (awayClan) {
+        awayTeamName = args.awayTeamName ?? awayClan.name;
+        awayTeamTag = awayClan.tag;
+      }
     }
 
-    // Validate: clans must be different
-    if (args.homeClanId === args.awayClanId) {
-      throw new Error("Home and away clans must be different");
+    // Generate placeholder players if not provided
+    const generatePlaceholderPlayers = (count: number) => {
+      return Array.from({ length: count }, (_, i) => ({
+        userId: undefined,
+        name: `Тоглогч ${i + 1}`,
+        isSubstitute: false,
+      }));
+    };
+
+    // Process home team players
+    let homeTeamPlayersWithNames: {
+      userId?: Id<"users">;
+      name: string;
+      isSubstitute: boolean;
+    }[];
+
+    if (args.homeTeamPlayers && args.homeTeamPlayers.length > 0) {
+      if (args.homeTeamPlayers.length !== playersPerTeam) {
+        throw new Error(`homeTeamPlayers must have exactly ${playersPerTeam} players`);
+      }
+      homeTeamPlayersWithNames = await Promise.all(
+        args.homeTeamPlayers.map(async (p, index) => {
+          let name = p.name ?? `Тоглогч ${index + 1}`;
+          if (p.userId && !p.name) {
+            const playerUser = await ctx.db.get(p.userId);
+            name = playerUser?.fullName ?? name;
+          }
+          return {
+            userId: p.userId,
+            name,
+            isSubstitute: p.isSubstitute ?? false,
+          };
+        })
+      );
+    } else {
+      homeTeamPlayersWithNames = generatePlaceholderPlayers(playersPerTeam);
     }
 
-    // Validate no duplicate players within home team
-    const homeUserIds = args.homeTeamPlayers.map((p) => p.userId);
-    const uniqueHomeIds = new Set(homeUserIds);
-    if (uniqueHomeIds.size !== homeUserIds.length) {
-      throw new Error("Duplicate players in home team are not allowed");
-    }
+    // Process away team players
+    let awayTeamPlayersWithNames: {
+      userId?: Id<"users">;
+      name: string;
+      isSubstitute: boolean;
+    }[];
 
-    // Validate no duplicate players within away team
-    const awayUserIds = args.awayTeamPlayers.map((p) => p.userId);
-    const uniqueAwayIds = new Set(awayUserIds);
-    if (uniqueAwayIds.size !== awayUserIds.length) {
-      throw new Error("Duplicate players in away team are not allowed");
+    if (args.awayTeamPlayers && args.awayTeamPlayers.length > 0) {
+      if (args.awayTeamPlayers.length !== playersPerTeam) {
+        throw new Error(`awayTeamPlayers must have exactly ${playersPerTeam} players`);
+      }
+      awayTeamPlayersWithNames = await Promise.all(
+        args.awayTeamPlayers.map(async (p, index) => {
+          let name = p.name ?? `Тоглогч ${index + 1}`;
+          if (p.userId && !p.name) {
+            const playerUser = await ctx.db.get(p.userId);
+            name = playerUser?.fullName ?? name;
+          }
+          return {
+            userId: p.userId,
+            name,
+            isSubstitute: p.isSubstitute ?? false,
+          };
+        })
+      );
+    } else {
+      awayTeamPlayersWithNames = generatePlaceholderPlayers(playersPerTeam);
     }
-
-    // Validate no player appears in both teams
-    const allPlayerIds = new Set([...homeUserIds, ...awayUserIds]);
-    if (allPlayerIds.size !== homeUserIds.length + awayUserIds.length) {
-      throw new Error("A player cannot be on both teams");
-    }
-
-    // Validate player counts
-    const homeRegularPlayers = args.homeTeamPlayers.filter((p) => !p.isSubstitute);
-    const awayRegularPlayers = args.awayTeamPlayers.filter((p) => !p.isSubstitute);
-    const homeSubstitutes = args.homeTeamPlayers.filter((p) => p.isSubstitute);
-    const awaySubstitutes = args.awayTeamPlayers.filter((p) => p.isSubstitute);
-
-    if (homeRegularPlayers.length !== args.playersPerTeam) {
-      throw new Error(`Home team must have exactly ${args.playersPerTeam} regular players`);
-    }
-    if (awayRegularPlayers.length !== args.playersPerTeam) {
-      throw new Error(`Away team must have exactly ${args.playersPerTeam} regular players`);
-    }
-    if (homeSubstitutes.length > 1) {
-      throw new Error("Home team can have at most 1 substitute");
-    }
-    if (awaySubstitutes.length > 1) {
-      throw new Error("Away team can have at most 1 substitute");
-    }
-
-    // Fetch user details for players
-    const homeTeamPlayersWithNames = await Promise.all(
-      args.homeTeamPlayers.map(async (p) => {
-        const playerUser = await ctx.db.get(p.userId);
-        return {
-          userId: p.userId,
-          name: playerUser?.fullName ?? "Unknown",
-          isSubstitute: p.isSubstitute,
-        };
-      })
-    );
-
-    const awayTeamPlayersWithNames = await Promise.all(
-      args.awayTeamPlayers.map(async (p) => {
-        const playerUser = await ctx.db.get(p.userId);
-        return {
-          userId: p.userId,
-          name: playerUser?.fullName ?? "Unknown",
-          isSubstitute: p.isSubstitute,
-        };
-      })
-    );
 
     // Create initial phase for Set 1
-    const initialPhase = createInitialPhase(args.playersPerTeam, "niileg", 1, 1);
+    const initialPhase = createInitialPhase(playersPerTeam, "niileg", 1, 1);
 
     // Create the game
     const gameId = await ctx.db.insert("teamGames", {
       homeClanId: args.homeClanId,
       awayClanId: args.awayClanId,
-      playersPerTeam: args.playersPerTeam,
-      creatorId: user._id,
+      homeTeamName,
+      awayTeamName,
+      homeTeamTag,
+      awayTeamTag,
+      playersPerTeam,
+      creatorId: user?._id,
       startedAt: Date.now(),
       homeTeam: {
         players: homeTeamPlayersWithNames,
@@ -310,11 +340,14 @@ export const recordShot = mutation({
     isHit: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const user = await getOptionalAuthUser(ctx);
     const game = await ctx.db.get(args.gameId);
     if (!game) throw new Error("Game not found");
     if (game.status === "finished") throw new Error("Game is already finished");
-    if (game.creatorId !== user._id) {
+
+    // If game has a creator, only creator can record shots
+    // If game has no creator (anonymous), anyone can record
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
       throw new Error("Only the game creator can record shots");
     }
 
@@ -583,10 +616,12 @@ export const editShot = mutation({
     shotIndex: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const user = await getOptionalAuthUser(ctx);
     const game = await ctx.db.get(args.gameId);
     if (!game) throw new Error("Game not found");
-    if (game.creatorId !== user._id) {
+
+    // If game has a creator, only creator can edit shots
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
       throw new Error("Only the game creator can edit shots");
     }
 
@@ -650,37 +685,115 @@ export const editShot = mutation({
   },
 });
 
+// Update team name during game
+export const updateTeamName = mutation({
+  args: {
+    gameId: v.id("teamGames"),
+    team: v.union(v.literal("home"), v.literal("away")),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await getOptionalAuthUser(ctx);
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+
+    // If game has a creator, only creator can update
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
+      throw new Error("Only the game creator can update team names");
+    }
+
+    if (args.team === "home") {
+      await ctx.db.patch(args.gameId, { homeTeamName: args.name });
+    } else {
+      await ctx.db.patch(args.gameId, { awayTeamName: args.name });
+    }
+
+    return { success: true };
+  },
+});
+
+// Update player name during game
+export const updatePlayerName = mutation({
+  args: {
+    gameId: v.id("teamGames"),
+    team: v.union(v.literal("home"), v.literal("away")),
+    playerIndex: v.number(),
+    name: v.string(),
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const user = await getOptionalAuthUser(ctx);
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+
+    // If game has a creator, only creator can update
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
+      throw new Error("Only the game creator can update player names");
+    }
+
+    const teamData = args.team === "home" ? { ...game.homeTeam } : { ...game.awayTeam };
+    const players = [...teamData.players];
+
+    if (args.playerIndex < 0 || args.playerIndex >= players.length) {
+      throw new Error(`Invalid playerIndex: ${args.playerIndex}`);
+    }
+
+    players[args.playerIndex] = {
+      ...players[args.playerIndex],
+      name: args.name,
+      ...(args.userId !== undefined && { userId: args.userId }),
+    };
+    teamData.players = players;
+
+    if (args.team === "home") {
+      await ctx.db.patch(args.gameId, { homeTeam: teamData });
+    } else {
+      await ctx.db.patch(args.gameId, { awayTeam: teamData });
+    }
+
+    return { success: true };
+  },
+});
+
 // ============================================
 // QUERIES
 // ============================================
 
-// Get a team game by ID (auth required - must be creator or participant)
+// Get a team game by ID - now accessible to anyone (for instant play)
 export const get = query({
   args: { id: v.id("teamGames") },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
     const game = await ctx.db.get(args.id);
     if (!game) return null;
 
-    // Check if user is creator or a participant
-    const isCreator = game.creatorId === user._id;
-    const isHomePlayer = game.homeTeam.players.some((p) => p.userId === user._id);
-    const isAwayPlayer = game.awayTeam.players.some((p) => p.userId === user._id);
+    // Use stored team names, fallback to clan names for backward compatibility
+    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanTag = game.homeTeamTag ?? "";
+    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanTag = game.awayTeamTag ?? "";
 
-    if (!isCreator && !isHomePlayer && !isAwayPlayer) {
-      throw new Error("Unauthorized: not a participant of this game");
+    // Fallback: fetch from clans if team names not stored (old data)
+    if (!game.homeTeamName && game.homeClanId) {
+      const homeClan = await ctx.db.get(game.homeClanId);
+      if (homeClan) {
+        homeClanName = homeClan.name;
+        homeClanTag = homeClan.tag;
+      }
     }
-
-    // Fetch clan names
-    const homeClan = await ctx.db.get(game.homeClanId);
-    const awayClan = await ctx.db.get(game.awayClanId);
+    if (!game.awayTeamName && game.awayClanId) {
+      const awayClan = await ctx.db.get(game.awayClanId);
+      if (awayClan) {
+        awayClanName = awayClan.name;
+        awayClanTag = awayClan.tag;
+      }
+    }
 
     return {
       ...game,
-      homeClanName: homeClan?.name ?? "Unknown",
-      homeClanTag: homeClan?.tag ?? "???",
-      awayClanName: awayClan?.name ?? "Unknown",
-      awayClanTag: awayClan?.tag ?? "???",
+      homeClanName,
+      homeClanTag,
+      awayClanName,
+      awayClanTag,
     };
   },
 });
@@ -694,19 +807,37 @@ export const getPublic = query({
       return null;
     }
 
-    const homeClan = await ctx.db.get(game.homeClanId);
-    const awayClan = await ctx.db.get(game.awayClanId);
+    // Use stored team names, fallback to clan names for backward compatibility
+    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanTag = game.homeTeamTag ?? "";
+    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanTag = game.awayTeamTag ?? "";
 
-    // Strip sensitive data
+    // Fallback: fetch from clans if team names not stored (old data)
+    if (!game.homeTeamName && game.homeClanId) {
+      const homeClan = await ctx.db.get(game.homeClanId);
+      if (homeClan) {
+        homeClanName = homeClan.name;
+        homeClanTag = homeClan.tag;
+      }
+    }
+    if (!game.awayTeamName && game.awayClanId) {
+      const awayClan = await ctx.db.get(game.awayClanId);
+      if (awayClan) {
+        awayClanName = awayClan.name;
+        awayClanTag = awayClan.tag;
+      }
+    }
+
     return {
       _id: game._id,
       startedAt: game.startedAt,
       finishedAt: game.finishedAt,
       playersPerTeam: game.playersPerTeam,
-      homeClanName: homeClan?.name ?? "Unknown",
-      homeClanTag: homeClan?.tag ?? "???",
-      awayClanName: awayClan?.name ?? "Unknown",
-      awayClanTag: awayClan?.tag ?? "???",
+      homeClanName,
+      homeClanTag,
+      awayClanName,
+      awayClanTag,
       homeTeam: {
         players: game.homeTeam.players.map((p) => ({
           name: p.name,
@@ -729,7 +860,7 @@ export const getPublic = query({
 export const listByUser = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const user = await getAuthUser(ctx);
+    const user = await getOptionalAuthUser(ctx);
     const limit = args.limit ?? 20;
 
     // Get all team games and filter by participation
@@ -738,27 +869,47 @@ export const listByUser = query({
       .order("desc")
       .take(100);
 
-    const userGames = allGames.filter((game) =>
-      game.homeTeam.players.some((p) => p.userId === user._id) ||
-      game.awayTeam.players.some((p) => p.userId === user._id) ||
-      game.creatorId === user._id
-    );
+    const userGames = user
+      ? allGames.filter((game) =>
+          game.homeTeam.players.some((p) => p.userId === user._id) ||
+          game.awayTeam.players.some((p) => p.userId === user._id) ||
+          game.creatorId === user._id
+        )
+      : [];
 
-    // Fetch clan names
+    // Use stored team names with fallback for old data
     const results = await Promise.all(
       userGames.slice(0, limit).map(async (game) => {
-        const homeClan = await ctx.db.get(game.homeClanId);
-        const awayClan = await ctx.db.get(game.awayClanId);
+        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanTag = game.homeTeamTag ?? "";
+        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanTag = game.awayTeamTag ?? "";
+
+        if (!game.homeTeamName && game.homeClanId) {
+          const homeClan = await ctx.db.get(game.homeClanId);
+          if (homeClan) {
+            homeClanName = homeClan.name;
+            homeClanTag = homeClan.tag;
+          }
+        }
+        if (!game.awayTeamName && game.awayClanId) {
+          const awayClan = await ctx.db.get(game.awayClanId);
+          if (awayClan) {
+            awayClanName = awayClan.name;
+            awayClanTag = awayClan.tag;
+          }
+        }
+
         return {
           _id: game._id,
           startedAt: game.startedAt,
           finishedAt: game.finishedAt,
           status: game.status,
           playersPerTeam: game.playersPerTeam,
-          homeClanName: homeClan?.name ?? "Unknown",
-          homeClanTag: homeClan?.tag ?? "???",
-          awayClanName: awayClan?.name ?? "Unknown",
-          awayClanTag: awayClan?.tag ?? "???",
+          homeClanName,
+          homeClanTag,
+          awayClanName,
+          awayClanTag,
           result: game.result,
         };
       })
@@ -796,21 +947,39 @@ export const listByClan = query({
       .sort((a, b) => b.startedAt - a.startedAt)
       .slice(0, limit);
 
-    // Fetch clan names
+    // Use stored team names with fallback for old data
     const results = await Promise.all(
       allGames.map(async (game) => {
-        const homeClan = await ctx.db.get(game.homeClanId);
-        const awayClan = await ctx.db.get(game.awayClanId);
+        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanTag = game.homeTeamTag ?? "";
+        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanTag = game.awayTeamTag ?? "";
+
+        if (!game.homeTeamName && game.homeClanId) {
+          const homeClan = await ctx.db.get(game.homeClanId);
+          if (homeClan) {
+            homeClanName = homeClan.name;
+            homeClanTag = homeClan.tag;
+          }
+        }
+        if (!game.awayTeamName && game.awayClanId) {
+          const awayClan = await ctx.db.get(game.awayClanId);
+          if (awayClan) {
+            awayClanName = awayClan.name;
+            awayClanTag = awayClan.tag;
+          }
+        }
+
         return {
           _id: game._id,
           startedAt: game.startedAt,
           finishedAt: game.finishedAt,
           status: game.status,
           playersPerTeam: game.playersPerTeam,
-          homeClanName: homeClan?.name ?? "Unknown",
-          homeClanTag: homeClan?.tag ?? "???",
-          awayClanName: awayClan?.name ?? "Unknown",
-          awayClanTag: awayClan?.tag ?? "???",
+          homeClanName,
+          homeClanTag,
+          awayClanName,
+          awayClanTag,
           result: game.result,
         };
       })
@@ -832,19 +1001,38 @@ export const listLive = query({
       .order("desc")
       .take(limit);
 
+    // Use stored team names with fallback for old data
     const results = await Promise.all(
       liveGames.map(async (game) => {
-        const homeClan = await ctx.db.get(game.homeClanId);
-        const awayClan = await ctx.db.get(game.awayClanId);
+        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanTag = game.homeTeamTag ?? "";
+        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanTag = game.awayTeamTag ?? "";
+
+        if (!game.homeTeamName && game.homeClanId) {
+          const homeClan = await ctx.db.get(game.homeClanId);
+          if (homeClan) {
+            homeClanName = homeClan.name;
+            homeClanTag = homeClan.tag;
+          }
+        }
+        if (!game.awayTeamName && game.awayClanId) {
+          const awayClan = await ctx.db.get(game.awayClanId);
+          if (awayClan) {
+            awayClanName = awayClan.name;
+            awayClanTag = awayClan.tag;
+          }
+        }
+
         const currentSet = game.sets[game.currentSet - 1];
         return {
           _id: game._id,
           startedAt: game.startedAt,
           playersPerTeam: game.playersPerTeam,
-          homeClanName: homeClan?.name ?? "Unknown",
-          homeClanTag: homeClan?.tag ?? "???",
-          awayClanName: awayClan?.name ?? "Unknown",
-          awayClanTag: awayClan?.tag ?? "???",
+          homeClanName,
+          homeClanTag,
+          awayClanName,
+          awayClanTag,
           currentSet: game.currentSet,
           homeScore: currentSet?.homeScore ?? 0,
           awayScore: currentSet?.awayScore ?? 0,
@@ -863,18 +1051,37 @@ export const getLive = query({
     const game = await ctx.db.get(args.id);
     if (!game) return null;
 
-    const homeClan = await ctx.db.get(game.homeClanId);
-    const awayClan = await ctx.db.get(game.awayClanId);
+    // Use stored team names, fallback to clan names for backward compatibility
+    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanTag = game.homeTeamTag ?? "";
+    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanTag = game.awayTeamTag ?? "";
+
+    // Fallback: fetch from clans if team names not stored (old data)
+    if (!game.homeTeamName && game.homeClanId) {
+      const homeClan = await ctx.db.get(game.homeClanId);
+      if (homeClan) {
+        homeClanName = homeClan.name;
+        homeClanTag = homeClan.tag;
+      }
+    }
+    if (!game.awayTeamName && game.awayClanId) {
+      const awayClan = await ctx.db.get(game.awayClanId);
+      if (awayClan) {
+        awayClanName = awayClan.name;
+        awayClanTag = awayClan.tag;
+      }
+    }
 
     return {
       _id: game._id,
       startedAt: game.startedAt,
       finishedAt: game.finishedAt,
       playersPerTeam: game.playersPerTeam,
-      homeClanName: homeClan?.name ?? "Unknown",
-      homeClanTag: homeClan?.tag ?? "???",
-      awayClanName: awayClan?.name ?? "Unknown",
-      awayClanTag: awayClan?.tag ?? "???",
+      homeClanName,
+      homeClanTag,
+      awayClanName,
+      awayClanTag,
       homeTeam: {
         players: game.homeTeam.players.map((p) => ({
           name: p.name,

@@ -26,6 +26,7 @@ interface PhaseSectionProps {
   homeTeamPlayers: { name: string }[];
   awayTeamPlayers: { name: string }[];
   onEditShot?: (shooterIndex: number, shotIndex: number) => void;
+  onEditPlayerName?: (team: "home" | "away", playerIndex: number) => void;
 }
 
 const phaseTypeLabels: Record<string, string> = {
@@ -42,6 +43,7 @@ export function PhaseSection({
   homeTeamPlayers,
   awayTeamPlayers,
   onEditShot,
+  onEditPlayerName,
 }: PhaseSectionProps) {
   const bgColor = isActive ? "bg-amber-50" : "bg-gray-100";
   const borderColor = isActive ? "border-amber-300" : "border-gray-200";
@@ -85,12 +87,14 @@ export function PhaseSection({
               key={`${shooter.team}-${shooter.playerIndex}-${index}`}
               name={getPlayerName(shooter.team, shooter.playerIndex)}
               team={shooter.team}
+              playerIndex={shooter.playerIndex}
               shots={shooter.shots}
               isCurrentShooter={isCurrentShooter}
               currentShotIndex={isCurrentShooter ? currentShotIndex : undefined}
               onEditShot={
                 onEditShot ? (shotIndex) => onEditShot(index, shotIndex) : undefined
               }
+              onEditName={onEditPlayerName}
             />
           );
         })}
