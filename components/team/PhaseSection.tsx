@@ -30,9 +30,9 @@ interface PhaseSectionProps {
 }
 
 const phaseTypeLabels: Record<string, string> = {
-  niileg: "Нийлэг",
-  shuvtraga: "Шувтрага",
-  merge: "Мэрж",
+  niileg: "НИЙЛЛЭГ ҮЕ",
+  shuvtraga: "ШУВТРАГА ҮЕ",
+  merge: "МЭРГЭ ҮЕ",
 };
 
 export function PhaseSection({

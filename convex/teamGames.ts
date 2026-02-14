@@ -44,13 +44,34 @@ interface ShooterConfig {
  *   Phase 1: players 0,1 from each team
  *   Phase 2: players 2,3 from each team
  *   Phase 3: players 4,5 from each team
+ *
+ * SPECIAL RULE for 6v6:
+ *   On the first cycle of every phase, only 2 shooters (one from each team)
+ *   After cycle 1, normal 4 shooters
+ *
+ * SET 2 SIDE SWAP:
+ *   In Set 2, teams swap physical positions
+ *   Set 1: Home on right, Away on left
+ *   Set 2: Home on left, Away on right
+ *   This effectively swaps which team shoots first for each direction
  */
 function generateShooterOrder(
   playersPerTeam: 4 | 5 | 6,
   phaseType: PhaseType,
-  direction: Direction
+  direction: Direction,
+  cycle: number = 1,
+  setNumber: number = 1
 ): ShooterConfig[] {
   const shooters: ShooterConfig[] = [];
+
+  // 6v6 special rule: first cycle has only 2 shooters (one from each team)
+  const isFirstCycle6v6 = playersPerTeam === 6 && cycle === 1;
+
+  // Set 2 side swap: teams swap positions, so swap the team assignments
+  // In Set 2, "home" becomes physically on left, "away" on right
+  // This means we need to swap team labels in the shooter order
+  const homeTeam: Team = setNumber === 2 ? "away" : "home";
+  const awayTeam: Team = setNumber === 2 ? "home" : "away";
 
   if (phaseType === "niileg") {
     // Phase 1: players at indices 0, 1
@@ -58,55 +79,82 @@ function generateShooterOrder(
     if (direction === "rtl") {
       // Right to left: start from rightmost (Home[0])
       // Order: Home[0] -> Away[0] -> Home[1] -> Away[1]
-      shooters.push({ team: "home", playerIndex: 0 });
-      shooters.push({ team: "away", playerIndex: 0 });
-      shooters.push({ team: "home", playerIndex: 1 });
-      shooters.push({ team: "away", playerIndex: 1 });
+      shooters.push({ team: homeTeam, playerIndex: 0 });
+      shooters.push({ team: awayTeam, playerIndex: 0 });
+      // 6v6 first cycle: only 2 shooters
+      if (!isFirstCycle6v6) {
+        shooters.push({ team: homeTeam, playerIndex: 1 });
+        shooters.push({ team: awayTeam, playerIndex: 1 });
+      }
     } else {
       // Left to right: start from leftmost (Away[1])
-      shooters.push({ team: "away", playerIndex: 1 });
-      shooters.push({ team: "home", playerIndex: 1 });
-      shooters.push({ team: "away", playerIndex: 0 });
-      shooters.push({ team: "home", playerIndex: 0 });
+      // 6v6 first cycle: only 2 shooters (start with Away[0], Home[0])
+      if (isFirstCycle6v6) {
+        shooters.push({ team: awayTeam, playerIndex: 0 });
+        shooters.push({ team: homeTeam, playerIndex: 0 });
+      } else {
+        shooters.push({ team: awayTeam, playerIndex: 1 });
+        shooters.push({ team: homeTeam, playerIndex: 1 });
+        shooters.push({ team: awayTeam, playerIndex: 0 });
+        shooters.push({ team: homeTeam, playerIndex: 0 });
+      }
     }
   } else if (phaseType === "shuvtraga") {
     // Phase 2: players at indices 2, 3
     // Seating order: Home[2], Away[2], Home[3], Away[3]
     if (direction === "ltr") {
       // Left to right: start from leftmost (Away[3])
-      shooters.push({ team: "away", playerIndex: 3 });
-      shooters.push({ team: "home", playerIndex: 3 });
-      shooters.push({ team: "away", playerIndex: 2 });
-      shooters.push({ team: "home", playerIndex: 2 });
+      // 6v6 first cycle: only 2 shooters (start with Away[2], Home[2])
+      if (isFirstCycle6v6) {
+        shooters.push({ team: awayTeam, playerIndex: 2 });
+        shooters.push({ team: homeTeam, playerIndex: 2 });
+      } else {
+        shooters.push({ team: awayTeam, playerIndex: 3 });
+        shooters.push({ team: homeTeam, playerIndex: 3 });
+        shooters.push({ team: awayTeam, playerIndex: 2 });
+        shooters.push({ team: homeTeam, playerIndex: 2 });
+      }
     } else {
-      shooters.push({ team: "home", playerIndex: 2 });
-      shooters.push({ team: "away", playerIndex: 2 });
-      shooters.push({ team: "home", playerIndex: 3 });
-      shooters.push({ team: "away", playerIndex: 3 });
+      shooters.push({ team: homeTeam, playerIndex: 2 });
+      shooters.push({ team: awayTeam, playerIndex: 2 });
+      // 6v6 first cycle: only 2 shooters
+      if (!isFirstCycle6v6) {
+        shooters.push({ team: homeTeam, playerIndex: 3 });
+        shooters.push({ team: awayTeam, playerIndex: 3 });
+      }
     }
   } else if (phaseType === "merge") {
     // Phase 3: depends on player count
     if (playersPerTeam === 6) {
       // Players at indices 4, 5
       if (direction === "rtl") {
-        shooters.push({ team: "home", playerIndex: 4 });
-        shooters.push({ team: "away", playerIndex: 4 });
-        shooters.push({ team: "home", playerIndex: 5 });
-        shooters.push({ team: "away", playerIndex: 5 });
+        shooters.push({ team: homeTeam, playerIndex: 4 });
+        shooters.push({ team: awayTeam, playerIndex: 4 });
+        // 6v6 first cycle: only 2 shooters
+        if (!isFirstCycle6v6) {
+          shooters.push({ team: homeTeam, playerIndex: 5 });
+          shooters.push({ team: awayTeam, playerIndex: 5 });
+        }
       } else {
-        shooters.push({ team: "away", playerIndex: 5 });
-        shooters.push({ team: "home", playerIndex: 5 });
-        shooters.push({ team: "away", playerIndex: 4 });
-        shooters.push({ team: "home", playerIndex: 4 });
+        // 6v6 first cycle: only 2 shooters (start with Away[4], Home[4])
+        if (isFirstCycle6v6) {
+          shooters.push({ team: awayTeam, playerIndex: 4 });
+          shooters.push({ team: homeTeam, playerIndex: 4 });
+        } else {
+          shooters.push({ team: awayTeam, playerIndex: 5 });
+          shooters.push({ team: homeTeam, playerIndex: 5 });
+          shooters.push({ team: awayTeam, playerIndex: 4 });
+          shooters.push({ team: homeTeam, playerIndex: 4 });
+        }
       }
     } else if (playersPerTeam === 5) {
-      // Player at index 4 only
+      // Player at index 4 only (no change for 5v5)
       if (direction === "rtl") {
-        shooters.push({ team: "home", playerIndex: 4 });
-        shooters.push({ team: "away", playerIndex: 4 });
+        shooters.push({ team: homeTeam, playerIndex: 4 });
+        shooters.push({ team: awayTeam, playerIndex: 4 });
       } else {
-        shooters.push({ team: "away", playerIndex: 4 });
-        shooters.push({ team: "home", playerIndex: 4 });
+        shooters.push({ team: awayTeam, playerIndex: 4 });
+        shooters.push({ team: homeTeam, playerIndex: 4 });
       }
     }
     // 4v4 has no merge phase
@@ -136,16 +184,43 @@ function getPhasesForPlayerCount(playersPerTeam: 4 | 5 | 6): PhaseType[] {
 }
 
 /**
+ * Generate the full shooter order for Golden Point
+ * Combines ALL players from ALL phases
+ * For 4v4: 8 players (4 from niileg + 4 from shuvtraga)
+ * For 5v5: 10 players (4 + 4 + 2)
+ * For 6v6: 12 players (4 + 4 + 4)
+ *
+ * Uses Set 2 direction (sides are swapped)
+ */
+function generateGoldenPointShooterOrder(playersPerTeam: 4 | 5 | 6): ShooterConfig[] {
+  const allShooters: ShooterConfig[] = [];
+  const phaseTypes = getPhasesForPlayerCount(playersPerTeam);
+
+  for (let i = 0; i < phaseTypes.length; i++) {
+    const phaseType = phaseTypes[i];
+    const phaseNumber = i + 1;
+    const direction = getPhaseDirection(phaseNumber);
+    // Use setNumber=2 since golden point happens after Set 2 (sides are swapped)
+    // Use cycle=2 for full shooter list (not the 6v6 first cycle special case)
+    const shooters = generateShooterOrder(playersPerTeam, phaseType, direction, 2, 2);
+    allShooters.push(...shooters);
+  }
+
+  return allShooters;
+}
+
+/**
  * Create initial phase structure for a set
  */
 function createInitialPhase(
   playersPerTeam: 4 | 5 | 6,
   phaseType: PhaseType,
   phaseNumber: number,
-  cycle: number
+  cycle: number,
+  setNumber: number = 1
 ) {
   const direction = getPhaseDirection(phaseNumber);
-  const shooterOrder = generateShooterOrder(playersPerTeam, phaseType, direction);
+  const shooterOrder = generateShooterOrder(playersPerTeam, phaseType, direction, cycle, setNumber);
 
   return {
     phaseNumber,
@@ -381,6 +456,54 @@ export const recordShot = mutation({
       }
     }
 
+    // Set 2 Early Win Detection: First team to reach 31 total wins immediately
+    if (game.currentSet === 2) {
+      const set1 = game.sets[0];
+      const homeTotal = set1.homeScore + currentSet.homeScore;
+      const awayTotal = set1.awayScore + currentSet.awayScore;
+
+      if (homeTotal >= 31 || awayTotal >= 31) {
+        // Update the phase with current shot
+        shooters[game.currentShooterIndex] = currentShooter;
+        currentPhase.shooters = shooters;
+        phases[game.currentPhaseIndex] = currentPhase;
+        currentSet.phases = phases;
+        sets[currentSetIndex] = currentSet;
+
+        // Determine winner
+        const winner = homeTotal >= 31 ? "home" : "away";
+
+        // Calculate pulled points for Set 2
+        if (currentSet.homeScore > 15) {
+          currentSet.homePulled = currentSet.homeScore - 15;
+          currentSet.awayPulled = 0;
+        } else if (currentSet.awayScore > 15) {
+          currentSet.awayPulled = currentSet.awayScore - 15;
+          currentSet.homePulled = 0;
+        } else {
+          currentSet.homePulled = 0;
+          currentSet.awayPulled = 0;
+        }
+
+        await ctx.db.patch(args.gameId, {
+          sets,
+          status: "finished",
+          finishedAt: Date.now(),
+          result: {
+            winner,
+            homeSet1Score: set1.homeScore,
+            awaySet1Score: set1.awayScore,
+            homeSet2Score: currentSet.homeScore,
+            awaySet2Score: currentSet.awayScore,
+            homeTotalPulled: (set1.homePulled ?? 0) + (currentSet.homePulled ?? 0),
+            awayTotalPulled: (set1.awayPulled ?? 0) + (currentSet.awayPulled ?? 0),
+            wasGoldenPoint: false,
+          },
+        });
+        return { gameEnded: true, winner };
+      }
+    }
+
     // Advance state - ROTATION MODE
     // After each shot, move to next shooter (not next shot of same shooter)
     let nextShooterIndex = game.currentShooterIndex + 1;
@@ -400,8 +523,8 @@ export const recordShot = mutation({
         currentPhase.isCompleted = true;
         nextShotInTurn = 0;
 
-        // Check if set should end (either team reached 15)
-        if (currentSet.homeScore >= 15 || currentSet.awayScore >= 15) {
+        // Check if set should end (combined score reaches 30)
+        if (currentSet.homeScore + currentSet.awayScore >= 30) {
           setEnded = true;
         } else {
           // Create next phase
@@ -416,7 +539,8 @@ export const recordShot = mutation({
             game.playersPerTeam,
             nextPhaseType,
             nextPhaseNumber,
-            nextCycle
+            nextCycle,
+            game.currentSet
           );
           phases.push(newPhase);
           nextPhaseIndex = phases.length - 1;
@@ -461,7 +585,7 @@ export const recordShot = mutation({
       if (game.currentSet === 1) {
         // Start Set 2
         newCurrentSet = 2;
-        const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1);
+        const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1, 2);
         sets.push({
           setNumber: 2,
           homeSide: "left", // Teams swap sides
@@ -541,11 +665,14 @@ async function handleGoldenPointShot(
   const goldenPoint = { ...game.goldenPoint! };
   const turns = [...goldenPoint.turns];
 
-  // Determine next shooter based on turn order continuation
-  const lastPhase = game.sets[1].phases[game.sets[1].phases.length - 1];
-  const shooterOrder = lastPhase.shooters;
+  // Generate full shooter order for golden point (all players from all phases)
+  const shooterOrder = generateGoldenPointShooterOrder(game.playersPerTeam);
   const nextIndex = turns.length % shooterOrder.length;
   const nextShooter = shooterOrder[nextIndex];
+
+  // Position is 1-indexed (1, 2, 3, 4, ...)
+  const position = turns.length + 1;
+  const isEvenPosition = position % 2 === 0;
 
   turns.push({
     team: nextShooter.team,
@@ -553,56 +680,48 @@ async function handleGoldenPointShot(
     shot: isHit,
   });
 
-  // Check for winner (pairs: first hits + second misses, or vice versa)
-  if (turns.length >= 2 && turns.length % 2 === 0) {
-    const lastTwo = turns.slice(-2);
-    const first = lastTwo[0];
-    const second = lastTwo[1];
+  // Helper function to end the game
+  const endGame = async (winner: Team) => {
+    const set1 = game.sets[0];
+    const set2 = game.sets[1];
+    await ctx.db.patch(game._id, {
+      goldenPoint: { ...goldenPoint, turns },
+      status: "finished",
+      finishedAt: Date.now(),
+      result: {
+        winner,
+        homeSet1Score: set1.homeScore,
+        awaySet1Score: set1.awayScore,
+        homeSet2Score: set2.homeScore,
+        awaySet2Score: set2.awayScore,
+        homeTotalPulled: (set1.homePulled ?? 0) + (set2.homePulled ?? 0),
+        awayTotalPulled: (set1.awayPulled ?? 0) + (set2.awayPulled ?? 0),
+        wasGoldenPoint: true,
+      },
+    });
+    return { gameEnded: true, goldenPointWinner: winner };
+  };
 
-    if (first.shot === true && second.shot === false) {
-      // First shooter's team wins
-      const set1 = game.sets[0];
-      const set2 = game.sets[1];
-      await ctx.db.patch(game._id, {
-        goldenPoint: { ...goldenPoint, turns },
-        status: "finished",
-        finishedAt: Date.now(),
-        result: {
-          winner: first.team,
-          homeSet1Score: set1.homeScore,
-          awaySet1Score: set1.awayScore,
-          homeSet2Score: set2.homeScore,
-          awaySet2Score: set2.awayScore,
-          homeTotalPulled: (set1.homePulled ?? 0) + (set2.homePulled ?? 0),
-          awayTotalPulled: (set1.awayPulled ?? 0) + (set2.awayPulled ?? 0),
-          wasGoldenPoint: true,
-        },
-      });
-      return { gameEnded: true, goldenPointWinner: first.team };
-    } else if (first.shot === false && second.shot === true) {
-      // Second shooter's team wins
-      const set1 = game.sets[0];
-      const set2 = game.sets[1];
-      await ctx.db.patch(game._id, {
-        goldenPoint: { ...goldenPoint, turns },
-        status: "finished",
-        finishedAt: Date.now(),
-        result: {
-          winner: second.team,
-          homeSet1Score: set1.homeScore,
-          awaySet1Score: set1.awayScore,
-          homeSet2Score: set2.homeScore,
-          awaySet2Score: set2.awayScore,
-          homeTotalPulled: (set1.homePulled ?? 0) + (set2.homePulled ?? 0),
-          awayTotalPulled: (set1.awayPulled ?? 0) + (set2.awayPulled ?? 0),
-          wasGoldenPoint: true,
-        },
-      });
-      return { gameEnded: true, goldenPointWinner: second.team };
-    }
-    // Both hit or both miss - continue
+  // SPECIAL RULE: Even position (2, 4, 6, 8...) hits = IMMEDIATE WIN
+  if (isEvenPosition && isHit) {
+    return await endGame(nextShooter.team);
   }
 
+  // Check pairs after even positions
+  if (isEvenPosition) {
+    const oddShooter = turns[turns.length - 2]; // Previous (odd position)
+    const evenShooter = turns[turns.length - 1]; // Current (even position)
+
+    // Odd hits, even misses → odd's team wins
+    if (oddShooter.shot === true && evenShooter.shot === false) {
+      return await endGame(oddShooter.team);
+    }
+
+    // Even hits is already handled above (immediate win)
+    // Both hit or both miss → continue to next pair
+  }
+
+  // Continue - no winner yet
   goldenPoint.turns = turns;
   goldenPoint.currentTurnIndex = turns.length;
   await ctx.db.patch(game._id, { goldenPoint });
