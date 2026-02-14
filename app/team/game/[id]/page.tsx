@@ -64,6 +64,38 @@ export default function TeamGamePage() {
     }
   }, [game?.currentPhaseIndex]);
 
+  // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
+  useEffect(() => {
+    if (!game || game.status === "finished" || isRecording) return;
+    if (game.playersPerTeam !== 6) return;
+
+    const currentSetData = game.sets[game.currentSet - 1];
+    const currentPhaseData = currentSetData?.phases[game.currentPhaseIndex];
+    if (!currentPhaseData) return;
+
+    // Only in first cycle, first round
+    if (currentPhaseData.cycle !== 1 || game.currentShotInTurn !== 0) return;
+
+    // Only for shooters 2 and 3 (second shooter from each team)
+    if (game.currentShooterIndex < 2) return;
+
+    const shooters = currentPhaseData.shooters;
+    const currentShooterData = shooters[game.currentShooterIndex];
+    if (!currentShooterData) return;
+
+    // Find teammate (first shooter from same team)
+    // If current is index 2 (home second), check index 0 (home first)
+    // If current is index 3 (away second), check index 1 (away first)
+    const teammateIndex = currentShooterData.team === shooters[0]?.team ? 0 : 1;
+    const teammateShot = shooters[teammateIndex]?.shots[0];
+
+    // If teammate shot (hit or miss, not skip), auto-skip this one
+    if (teammateShot === true || teammateShot === false) {
+      // Auto-skip: trigger skip without user interaction
+      recordShot({ gameId, isSkip: true }).catch(console.error);
+    }
+  }, [game?.currentShooterIndex, game?.currentPhaseIndex, game?.currentShotInTurn, gameId, isRecording]);
+
   // Distinguish loading from not found
   if (game === undefined) {
     return (
@@ -110,6 +142,35 @@ export default function TeamGamePage() {
     } finally {
       setIsRecording(false);
     }
+  };
+
+  // Handle skip for 6v6 first round
+  const handleRecordSkip = async () => {
+    if (isRecording) return;
+    setIsRecording(true);
+    try {
+      await recordShot({ gameId, isSkip: true });
+    } catch (error) {
+      console.error("Failed to record skip:", error);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
+  // Determine if skip button should be shown (6v6 first round, first cycle)
+  const shouldShowSkipButton = () => {
+    if (!currentPhase || !currentShooter) return false;
+    // Only for 6v6 games
+    if (game.playersPerTeam !== 6) return false;
+    // Only for first round (shot index 0)
+    if (game.currentShotInTurn !== 0) return false;
+    // Only for first cycle
+    if (currentPhase.cycle !== 1) return false;
+    // Only for first shooter of each team (indices 0 and 1 in the shooter array)
+    // Shooter 0: Home first, Shooter 1: Away first
+    // Shooter 2: Home second, Shooter 3: Away second
+    if (game.currentShooterIndex >= 2) return false;
+    return true;
   };
 
   // Handle shot editing
@@ -295,6 +356,8 @@ export default function TeamGamePage() {
           shotNumber={game.currentShotInTurn + 1}
           onHit={() => handleRecordShot(true)}
           onMiss={() => handleRecordShot(false)}
+          onSkip={handleRecordSkip}
+          showSkipButton={shouldShowSkipButton()}
           disabled={isRecording}
         />
       )}

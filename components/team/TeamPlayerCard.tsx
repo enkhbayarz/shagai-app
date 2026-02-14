@@ -82,21 +82,25 @@ export function TeamPlayerCard({
           if (shot === true) {
             bgClass = "bg-emerald-500"; // hit
             ariaLabel = `Сум ${i + 1}: оносон`;
-          }
-          if (shot === false) {
+          } else if (shot === false) {
             bgClass = "bg-red-500"; // miss
             ariaLabel = `Сум ${i + 1}: алдсан`;
+          } else if (shot === "skip") {
+            bgClass = "bg-gray-400"; // skipped
+            ariaLabel = `Сум ${i + 1}: алгассан`;
           }
+
+          const isEditable = shot !== null && shot !== "skip";
 
           return (
             <button
               key={i}
-              onClick={() => shot !== null && onEditShot?.(i)}
-              disabled={shot === null}
+              onClick={() => isEditable && onEditShot?.(i)}
+              disabled={!isEditable}
               aria-label={ariaLabel}
               className={`w-4 h-4 rounded-full transition-all ${bgClass} ${
                 isCurrentShot ? "ring-2 ring-amber-400 scale-125" : ""
-              } ${shot !== null ? "cursor-pointer hover:opacity-80" : ""}`}
+              } ${isEditable ? "cursor-pointer hover:opacity-80" : ""}`}
             />
           );
         })}

@@ -64,8 +64,8 @@ function generateShooterOrder(
 ): ShooterConfig[] {
   const shooters: ShooterConfig[] = [];
 
-  // 6v6 special rule: first cycle has only 2 shooters (one from each team)
-  const isFirstCycle6v6 = playersPerTeam === 6 && cycle === 1;
+  // 6v6 special rule: first cycle first round has skips (handled in recordShot)
+  // All 4 shooters are still created, skip logic is handled separately
 
   // Set 2 side swap: teams swap positions, so swap the team assignments
   // In Set 2, "home" becomes physically on left, "away" on right
@@ -81,47 +81,29 @@ function generateShooterOrder(
       // Order: Home[0] -> Away[0] -> Home[1] -> Away[1]
       shooters.push({ team: homeTeam, playerIndex: 0 });
       shooters.push({ team: awayTeam, playerIndex: 0 });
-      // 6v6 first cycle: only 2 shooters
-      if (!isFirstCycle6v6) {
-        shooters.push({ team: homeTeam, playerIndex: 1 });
-        shooters.push({ team: awayTeam, playerIndex: 1 });
-      }
+      shooters.push({ team: homeTeam, playerIndex: 1 });
+      shooters.push({ team: awayTeam, playerIndex: 1 });
     } else {
       // Left to right: start from leftmost (Away[1])
-      // 6v6 first cycle: only 2 shooters (start with Away[0], Home[0])
-      if (isFirstCycle6v6) {
-        shooters.push({ team: awayTeam, playerIndex: 0 });
-        shooters.push({ team: homeTeam, playerIndex: 0 });
-      } else {
-        shooters.push({ team: awayTeam, playerIndex: 1 });
-        shooters.push({ team: homeTeam, playerIndex: 1 });
-        shooters.push({ team: awayTeam, playerIndex: 0 });
-        shooters.push({ team: homeTeam, playerIndex: 0 });
-      }
+      shooters.push({ team: awayTeam, playerIndex: 1 });
+      shooters.push({ team: homeTeam, playerIndex: 1 });
+      shooters.push({ team: awayTeam, playerIndex: 0 });
+      shooters.push({ team: homeTeam, playerIndex: 0 });
     }
   } else if (phaseType === "shuvtraga") {
     // Phase 2: players at indices 2, 3
     // Seating order: Home[2], Away[2], Home[3], Away[3]
     if (direction === "ltr") {
       // Left to right: start from leftmost (Away[3])
-      // 6v6 first cycle: only 2 shooters (start with Away[2], Home[2])
-      if (isFirstCycle6v6) {
-        shooters.push({ team: awayTeam, playerIndex: 2 });
-        shooters.push({ team: homeTeam, playerIndex: 2 });
-      } else {
-        shooters.push({ team: awayTeam, playerIndex: 3 });
-        shooters.push({ team: homeTeam, playerIndex: 3 });
-        shooters.push({ team: awayTeam, playerIndex: 2 });
-        shooters.push({ team: homeTeam, playerIndex: 2 });
-      }
+      shooters.push({ team: awayTeam, playerIndex: 3 });
+      shooters.push({ team: homeTeam, playerIndex: 3 });
+      shooters.push({ team: awayTeam, playerIndex: 2 });
+      shooters.push({ team: homeTeam, playerIndex: 2 });
     } else {
       shooters.push({ team: homeTeam, playerIndex: 2 });
       shooters.push({ team: awayTeam, playerIndex: 2 });
-      // 6v6 first cycle: only 2 shooters
-      if (!isFirstCycle6v6) {
-        shooters.push({ team: homeTeam, playerIndex: 3 });
-        shooters.push({ team: awayTeam, playerIndex: 3 });
-      }
+      shooters.push({ team: homeTeam, playerIndex: 3 });
+      shooters.push({ team: awayTeam, playerIndex: 3 });
     }
   } else if (phaseType === "merge") {
     // Phase 3: depends on player count
@@ -130,22 +112,13 @@ function generateShooterOrder(
       if (direction === "rtl") {
         shooters.push({ team: homeTeam, playerIndex: 4 });
         shooters.push({ team: awayTeam, playerIndex: 4 });
-        // 6v6 first cycle: only 2 shooters
-        if (!isFirstCycle6v6) {
-          shooters.push({ team: homeTeam, playerIndex: 5 });
-          shooters.push({ team: awayTeam, playerIndex: 5 });
-        }
+        shooters.push({ team: homeTeam, playerIndex: 5 });
+        shooters.push({ team: awayTeam, playerIndex: 5 });
       } else {
-        // 6v6 first cycle: only 2 shooters (start with Away[4], Home[4])
-        if (isFirstCycle6v6) {
-          shooters.push({ team: awayTeam, playerIndex: 4 });
-          shooters.push({ team: homeTeam, playerIndex: 4 });
-        } else {
-          shooters.push({ team: awayTeam, playerIndex: 5 });
-          shooters.push({ team: homeTeam, playerIndex: 5 });
-          shooters.push({ team: awayTeam, playerIndex: 4 });
-          shooters.push({ team: homeTeam, playerIndex: 4 });
-        }
+        shooters.push({ team: awayTeam, playerIndex: 5 });
+        shooters.push({ team: homeTeam, playerIndex: 5 });
+        shooters.push({ team: awayTeam, playerIndex: 4 });
+        shooters.push({ team: homeTeam, playerIndex: 4 });
       }
     } else if (playersPerTeam === 5) {
       // Player at index 4 only (no change for 5v5)
@@ -408,13 +381,18 @@ export const create = mutation({
   },
 });
 
-// Record a shot
+// Record a shot (or skip for 6v6 first round)
 export const recordShot = mutation({
   args: {
     gameId: v.id("teamGames"),
-    isHit: v.boolean(),
+    isHit: v.optional(v.boolean()),
+    isSkip: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    // Validate: either isHit or isSkip must be provided
+    if (args.isHit === undefined && !args.isSkip) {
+      throw new Error("Either isHit or isSkip must be provided");
+    }
     const user = await getOptionalAuthUser(ctx);
     const game = await ctx.db.get(args.gameId);
     if (!game) throw new Error("Game not found");
@@ -426,8 +404,11 @@ export const recordShot = mutation({
       throw new Error("Only the game creator can record shots");
     }
 
-    // Handle golden point if active
+    // Handle golden point if active (skip not allowed in golden point)
     if (game.goldenPoint?.isActive) {
+      if (args.isHit === undefined) {
+        throw new Error("isHit is required for golden point shots");
+      }
       return await handleGoldenPointShot(ctx, game, args.isHit);
     }
 
@@ -439,16 +420,20 @@ export const recordShot = mutation({
     const shooters = [...currentPhase.shooters];
     const currentShooter = { ...shooters[game.currentShooterIndex] };
 
-    // Record the shot
+    // Record the shot (or skip)
     // In rotation mode, currentShotInTurn represents the "round" (which shot slot we're filling)
     const shots = [...currentShooter.shots];
-    shots[game.currentShotInTurn] = args.isHit;
+    if (args.isSkip) {
+      shots[game.currentShotInTurn] = "skip";
+    } else {
+      shots[game.currentShotInTurn] = args.isHit!;
+    }
     currentShooter.shots = shots;
     shooters[game.currentShooterIndex] = currentShooter;
     currentPhase.shooters = shooters;
 
-    // Update score if hit
-    if (args.isHit) {
+    // Update score if hit (skip doesn't change score)
+    if (args.isHit === true) {
       if (currentShooter.team === "home") {
         currentSet.homeScore += 1;
       } else {

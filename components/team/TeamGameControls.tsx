@@ -8,6 +8,8 @@ interface TeamGameControlsProps {
   shotNumber: number; // 1-4
   onHit: () => void;
   onMiss: () => void;
+  onSkip?: () => void;
+  showSkipButton?: boolean;
   disabled?: boolean;
 }
 
@@ -17,6 +19,8 @@ export function TeamGameControls({
   shotNumber,
   onHit,
   onMiss,
+  onSkip,
+  showSkipButton = false,
   disabled = false,
 }: TeamGameControlsProps) {
   const teamColor = currentTeam === "home" ? "text-blue-600" : "text-orange-600";
@@ -46,6 +50,20 @@ export function TeamGameControls({
         >
           Алдаа
         </motion.button>
+
+        {/* Skip Button - Only for 6v6 first round */}
+        {showSkipButton && onSkip && (
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={onSkip}
+            disabled={disabled}
+            className={`w-20 h-20 rounded-full bg-gray-400 text-white font-bold text-lg shadow-lg transition-all
+              ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-500 active:bg-gray-600"}
+            `}
+          >
+            Алгасах
+          </motion.button>
+        )}
 
         {/* Hit Button */}
         <motion.button

@@ -213,7 +213,7 @@ export default defineSchema({
               v.object({
                 team: v.union(v.literal("home"), v.literal("away")),
                 playerIndex: v.number(), // index in team roster (0-based)
-                shots: v.array(v.union(v.boolean(), v.null())), // 4 shots per phase appearance
+                shots: v.array(v.union(v.boolean(), v.literal("skip"), v.null())), // 4 shots per phase appearance (true=hit, false=miss, "skip"=skipped, null=unshot)
               })
             ),
 
