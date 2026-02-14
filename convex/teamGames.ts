@@ -365,6 +365,7 @@ export const recordShot = mutation({
     const currentShooter = { ...shooters[game.currentShooterIndex] };
 
     // Record the shot
+    // In rotation mode, currentShotInTurn represents the "round" (which shot slot we're filling)
     const shots = [...currentShooter.shots];
     shots[game.currentShotInTurn] = args.isHit;
     currentShooter.shots = shots;
@@ -380,22 +381,24 @@ export const recordShot = mutation({
       }
     }
 
-    // Advance state
-    let nextShotInTurn = game.currentShotInTurn + 1;
-    let nextShooterIndex = game.currentShooterIndex;
+    // Advance state - ROTATION MODE
+    // After each shot, move to next shooter (not next shot of same shooter)
+    let nextShooterIndex = game.currentShooterIndex + 1;
+    let nextShotInTurn = game.currentShotInTurn;
     let nextPhaseIndex = game.currentPhaseIndex;
     let setEnded = false;
     let gameEnded = false;
 
-    // Check if shooter's turn is complete (4 shots)
-    if (nextShotInTurn >= 4) {
-      nextShotInTurn = 0;
-      nextShooterIndex += 1;
+    // Check if all shooters have completed this round
+    if (nextShooterIndex >= currentPhase.shooters.length) {
+      // All shooters have shot once in this round, advance to next round
+      nextShooterIndex = 0;
+      nextShotInTurn += 1;
 
-      // Check if phase is complete
-      if (nextShooterIndex >= currentPhase.shooters.length) {
+      // Check if all 4 rounds are complete (phase is done)
+      if (nextShotInTurn >= 4) {
         currentPhase.isCompleted = true;
-        nextShooterIndex = 0;
+        nextShotInTurn = 0;
 
         // Check if set should end (either team reached 15)
         if (currentSet.homeScore >= 15 || currentSet.awayScore >= 15) {

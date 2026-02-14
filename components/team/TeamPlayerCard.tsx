@@ -38,7 +38,7 @@ export function TeamPlayerCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`relative rounded-lg border-2 ${borderColor} ${bgColor} p-2 w-[72px] flex-shrink-0 transition-all ${
+      className={`relative rounded-lg border-2 ${borderColor} ${bgColor} p-2 w-[90px] flex-shrink-0 transition-all ${
         isCurrentShooter ? "ring-2 ring-amber-400 ring-offset-1" : ""
       }`}
     >
@@ -73,8 +73,8 @@ export function TeamPlayerCard({
         </div>
       </button>
 
-      {/* Shot Indicators - 2x2 Grid */}
-      <div className="grid grid-cols-2 gap-1 justify-items-center">
+      {/* Shot Indicators - Vertical Column */}
+      <div className="flex flex-col items-center gap-1">
         {shots.map((shot, i) => {
           const isCurrentShot = isCurrentShooter && i === currentShotIndex;
           let bgClass = "bg-gray-300"; // unshot
@@ -94,7 +94,7 @@ export function TeamPlayerCard({
               onClick={() => shot !== null && onEditShot?.(i)}
               disabled={shot === null}
               aria-label={ariaLabel}
-              className={`w-3 h-3 rounded-full transition-all ${bgClass} ${
+              className={`w-4 h-4 rounded-full transition-all ${bgClass} ${
                 isCurrentShot ? "ring-2 ring-amber-400 scale-125" : ""
               } ${shot !== null ? "cursor-pointer hover:opacity-80" : ""}`}
             />

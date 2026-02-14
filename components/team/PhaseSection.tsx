@@ -56,6 +56,21 @@ export function PhaseSection({
     return awayTeamPlayers[playerIndex]?.name ?? `Тоглогч ${playerIndex + 1}`;
   };
 
+  // For RTL direction, reverse the display order so rightmost shooter appears on the right
+  // Visual: Yellow P2 | Blue P2 | Yellow P1 | Blue P1 (left to right)
+  // Shooting order (array): Home P1, Away P1, Home P2, Away P2
+  const displayShooters = phase.direction === "rtl"
+    ? [...phase.shooters].reverse()
+    : phase.shooters;
+
+  // Map display index back to original index for callbacks
+  const getOriginalIndex = (displayIndex: number) => {
+    if (phase.direction === "rtl") {
+      return phase.shooters.length - 1 - displayIndex;
+    }
+    return displayIndex;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -79,12 +94,13 @@ export function PhaseSection({
 
       {/* Shooters Grid */}
       <div className="flex justify-center gap-1 overflow-x-auto pb-1">
-        {phase.shooters.map((shooter, index) => {
-          const isCurrentShooter = isActive && index === currentShooterIndex;
+        {displayShooters.map((shooter, displayIndex) => {
+          const originalIndex = getOriginalIndex(displayIndex);
+          const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
 
           return (
             <TeamPlayerCard
-              key={`${shooter.team}-${shooter.playerIndex}-${index}`}
+              key={`${shooter.team}-${shooter.playerIndex}-${displayIndex}`}
               name={getPlayerName(shooter.team, shooter.playerIndex)}
               team={shooter.team}
               playerIndex={shooter.playerIndex}
@@ -92,7 +108,7 @@ export function PhaseSection({
               isCurrentShooter={isCurrentShooter}
               currentShotIndex={isCurrentShooter ? currentShotIndex : undefined}
               onEditShot={
-                onEditShot ? (shotIndex) => onEditShot(index, shotIndex) : undefined
+                onEditShot ? (shotIndex) => onEditShot(originalIndex, shotIndex) : undefined
               }
               onEditName={onEditPlayerName}
             />

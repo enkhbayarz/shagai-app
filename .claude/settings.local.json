@@ -12,7 +12,8 @@
       "Bash(bun add:*)",
       "Bash(grep:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
