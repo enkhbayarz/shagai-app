@@ -21,7 +21,7 @@ export default function TeamSetupPage() {
   const router = useRouter();
 
   // Game settings
-  const [playersPerTeam, setPlayersPerTeam] = useState<4 | 5 | 6>(6);
+  const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6>(6);
   const [homeTeamName, setHomeTeamName] = useState("Эзэн баг");
   const [awayTeamName, setAwayTeamName] = useState("Зочин баг");
   const [isEditingHomeName, setIsEditingHomeName] = useState(false);
@@ -149,7 +149,7 @@ export default function TeamSetupPage() {
   };
 
   // Handle player count change
-  const handlePlayerCountChange = (count: 4 | 5 | 6) => {
+  const handlePlayerCountChange = (count: 3 | 4 | 5 | 6) => {
     setPlayersPerTeam(count);
     setHomePlayers(generatePlayers(count));
     setAwayPlayers(generatePlayers(count));
@@ -247,8 +247,8 @@ export default function TeamSetupPage() {
               <div className="text-xs text-muted-foreground text-center mb-2">
                 Тоглогчдын тоо
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {([6, 5, 4] as const).map((num) => (
+              <div className="grid grid-cols-4 gap-2">
+                {([6, 5, 4, 3] as const).map((num) => (
                   <Button
                     key={num}
                     variant={playersPerTeam === num ? "default" : "outline"}

@@ -155,7 +155,7 @@ export default defineSchema({
     awayTeamName: v.optional(v.string()), // "Зочин баг" or actual team name
     homeTeamTag: v.optional(v.string()), // Optional tag from clan
     awayTeamTag: v.optional(v.string()), // Optional tag from clan
-    playersPerTeam: v.union(v.literal(4), v.literal(5), v.literal(6)),
+    playersPerTeam: v.union(v.literal(3), v.literal(4), v.literal(5), v.literal(6)),
 
     // Metadata
     creatorId: v.optional(v.id("users")), // Optional - can play without login

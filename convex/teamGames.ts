@@ -30,6 +30,10 @@ interface ShooterConfig {
  *
  * Seating: A1, B1, A2, B2 (A=Home, B=Away) - alternating
  *
+ * For 3v3:
+ *   Phase 1 (Niileg): players 0,1 from each team
+ *   Phase 2 (Merge): player 2 from each team
+ *
  * For 4v4:
  *   Phase 1: players 0,1 from each team
  *   Phase 2: players 2,3 from each team
@@ -56,7 +60,7 @@ interface ShooterConfig {
  *   This effectively swaps which team shoots first for each direction
  */
 function generateShooterOrder(
-  playersPerTeam: 4 | 5 | 6,
+  playersPerTeam: 3 | 4 | 5 | 6,
   phaseType: PhaseType,
   direction: Direction,
   cycle: number = 1,
@@ -121,13 +125,22 @@ function generateShooterOrder(
         shooters.push({ team: homeTeam, playerIndex: 4 });
       }
     } else if (playersPerTeam === 5) {
-      // Player at index 4 only (no change for 5v5)
+      // Player at index 4 only
       if (direction === "rtl") {
         shooters.push({ team: homeTeam, playerIndex: 4 });
         shooters.push({ team: awayTeam, playerIndex: 4 });
       } else {
         shooters.push({ team: awayTeam, playerIndex: 4 });
         shooters.push({ team: homeTeam, playerIndex: 4 });
+      }
+    } else if (playersPerTeam === 3) {
+      // 3v3: Player at index 2 only
+      if (direction === "rtl") {
+        shooters.push({ team: homeTeam, playerIndex: 2 });
+        shooters.push({ team: awayTeam, playerIndex: 2 });
+      } else {
+        shooters.push({ team: awayTeam, playerIndex: 2 });
+        shooters.push({ team: homeTeam, playerIndex: 2 });
       }
     }
     // 4v4 has no merge phase
@@ -149,7 +162,11 @@ function getPhaseDirection(phaseNumber: number): Direction {
 /**
  * Get the phases for a given player count
  */
-function getPhasesForPlayerCount(playersPerTeam: 4 | 5 | 6): PhaseType[] {
+function getPhasesForPlayerCount(playersPerTeam: 3 | 4 | 5 | 6): PhaseType[] {
+  if (playersPerTeam === 3) {
+    // 3v3: niileg (players 0,1) + merge (player 2)
+    return ["niileg", "merge"];
+  }
   if (playersPerTeam === 4) {
     return ["niileg", "shuvtraga"];
   }
@@ -159,13 +176,14 @@ function getPhasesForPlayerCount(playersPerTeam: 4 | 5 | 6): PhaseType[] {
 /**
  * Generate the full shooter order for Golden Point
  * Combines ALL players from ALL phases
+ * For 3v3: 6 players (4 from niileg + 2 from merge)
  * For 4v4: 8 players (4 from niileg + 4 from shuvtraga)
  * For 5v5: 10 players (4 + 4 + 2)
  * For 6v6: 12 players (4 + 4 + 4)
  *
  * Uses Set 2 direction (sides are swapped)
  */
-function generateGoldenPointShooterOrder(playersPerTeam: 4 | 5 | 6): ShooterConfig[] {
+function generateGoldenPointShooterOrder(playersPerTeam: 3 | 4 | 5 | 6): ShooterConfig[] {
   const allShooters: ShooterConfig[] = [];
   const phaseTypes = getPhasesForPlayerCount(playersPerTeam);
 
@@ -186,7 +204,7 @@ function generateGoldenPointShooterOrder(playersPerTeam: 4 | 5 | 6): ShooterConf
  * Create initial phase structure for a set
  */
 function createInitialPhase(
-  playersPerTeam: 4 | 5 | 6,
+  playersPerTeam: 3 | 4 | 5 | 6,
   phaseType: PhaseType,
   phaseNumber: number,
   cycle: number,
@@ -223,7 +241,7 @@ export const create = mutation({
     homeTeamName: v.optional(v.string()),
     awayTeamName: v.optional(v.string()),
     // Player count (default 4)
-    playersPerTeam: v.optional(v.union(v.literal(4), v.literal(5), v.literal(6))),
+    playersPerTeam: v.optional(v.union(v.literal(3), v.literal(4), v.literal(5), v.literal(6))),
     // Optional player arrays - if not provided, placeholders will be used
     homeTeamPlayers: v.optional(
       v.array(
@@ -493,12 +511,47 @@ export const recordShot = mutation({
       return { setEnded: true, newSet: 2 };
     }
 
-    // Set 2 Early Win Detection: First team to reach 31 total wins immediately
+    // Set 2 Early Win Detection
     if (game.currentSet === 2) {
       const set1 = game.sets[0];
       const homeTotal = set1.homeScore + currentSet.homeScore;
       const awayTotal = set1.awayScore + currentSet.awayScore;
 
+      // SPECIAL RULE: If Set 1 was 15-15, first to reach 15 in Set 2 wins
+      if (set1.homeScore === 15 && set1.awayScore === 15) {
+        // First team to reach 15 in Set 2 wins immediately
+        if (currentSet.homeScore === 15 || currentSet.awayScore === 15) {
+          // Update phase with current shot
+          shooters[game.currentShooterIndex] = currentShooter;
+          currentPhase.shooters = shooters;
+          phases[game.currentPhaseIndex] = currentPhase;
+          currentSet.phases = phases;
+
+          const winner = currentSet.homeScore === 15 ? "home" : "away";
+          currentSet.homePulled = 0;
+          currentSet.awayPulled = 0;
+          sets[currentSetIndex] = currentSet;
+
+          await ctx.db.patch(args.gameId, {
+            sets,
+            status: "finished",
+            finishedAt: Date.now(),
+            result: {
+              winner,
+              homeSet1Score: 15,
+              awaySet1Score: 15,
+              homeSet2Score: currentSet.homeScore,
+              awaySet2Score: currentSet.awayScore,
+              homeTotalPulled: 0,
+              awayTotalPulled: 0,
+              wasGoldenPoint: false,
+            },
+          });
+          return { gameEnded: true, winner };
+        }
+      }
+
+      // Standard rule: First team to reach 31 total wins immediately
       if (homeTotal >= 31 || awayTotal >= 31) {
         // Update the phase with current shot
         shooters[game.currentShooterIndex] = currentShooter;

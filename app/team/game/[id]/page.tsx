@@ -65,13 +65,19 @@ export default function TeamGamePage() {
   }, [game?.currentPhaseIndex]);
 
   // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
+  // ONLY applies to: Set 1, niileg phase, first cycle
   useEffect(() => {
     if (!game || game.status === "finished" || isRecording) return;
     if (game.playersPerTeam !== 6) return;
+    // Only for Set 1 (1-р өрөг)
+    if (game.currentSet !== 1) return;
 
     const currentSetData = game.sets[game.currentSet - 1];
     const currentPhaseData = currentSetData?.phases[game.currentPhaseIndex];
     if (!currentPhaseData) return;
+
+    // Only for niileg phase (НИЙЛЭГ ҮЕ)
+    if (currentPhaseData.phaseType !== "niileg") return;
 
     // Only in first cycle, first round
     if (currentPhaseData.cycle !== 1 || game.currentShotInTurn !== 0) return;
@@ -94,7 +100,7 @@ export default function TeamGamePage() {
       // Auto-skip: trigger skip without user interaction
       recordShot({ gameId, isSkip: true }).catch(console.error);
     }
-  }, [game?.currentShooterIndex, game?.currentPhaseIndex, game?.currentShotInTurn, gameId, isRecording]);
+  }, [game?.currentShooterIndex, game?.currentPhaseIndex, game?.currentShotInTurn, game?.currentSet, gameId, isRecording]);
 
   // Distinguish loading from not found
   if (game === undefined) {
@@ -157,11 +163,15 @@ export default function TeamGamePage() {
     }
   };
 
-  // Determine if skip button should be shown (6v6 first round, first cycle)
+  // Determine if skip button should be shown (6v6, Set 1, first cycle of niileg only)
   const shouldShowSkipButton = () => {
     if (!currentPhase || !currentShooter) return false;
     // Only for 6v6 games
     if (game.playersPerTeam !== 6) return false;
+    // Only for Set 1 (1-р өрөг)
+    if (game.currentSet !== 1) return false;
+    // Only for niileg phase (НИЙЛЭГ ҮЕ)
+    if (currentPhase.phaseType !== "niileg") return false;
     // Only for first round (shot index 0)
     if (game.currentShotInTurn !== 0) return false;
     // Only for first cycle
