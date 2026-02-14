@@ -415,6 +415,24 @@ export const joinByCode = mutation({
   },
 });
 
+// Search teams by name
+export const search = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    const searchTerm = args.query.toLowerCase();
+    const teams = await ctx.db.query("clans").take(100);
+
+    return teams
+      .filter((team) => team.name.toLowerCase().includes(searchTerm))
+      .slice(0, 10)
+      .map((team) => ({
+        _id: team._id,
+        name: team.name,
+        tag: team.tag,
+      }));
+  },
+});
+
 // List all teams with member counts (public, strips inviteCode)
 export const list = query({
   args: { limit: v.optional(v.number()) },

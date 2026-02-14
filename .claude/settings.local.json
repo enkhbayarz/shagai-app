@@ -10,7 +10,9 @@
       "Bash(tree:*)",
       "Bash(wc:*)",
       "Bash(bun add:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)"
     ]
   }
 }

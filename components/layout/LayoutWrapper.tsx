@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { AppShell } from "./AppShell";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { UserSyncProvider } from "@/components/providers/UserSyncProvider";
 
 // Routes that should have NO sidebar (truly full screen)
 const FULL_SCREEN_ROUTES = [
@@ -46,7 +47,9 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <>
       <SignedIn>
-        <AppShell collapsed={isCollapsed}>{children}</AppShell>
+        <UserSyncProvider>
+          <AppShell collapsed={isCollapsed}>{children}</AppShell>
+        </UserSyncProvider>
       </SignedIn>
       <SignedOut>
         <LandingPage />

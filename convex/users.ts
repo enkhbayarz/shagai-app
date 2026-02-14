@@ -1,12 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthUser, requireAdmin } from "./auth";
+import { getAuthUser, getOptionalAuthUser, requireAdmin } from "./auth";
 
 // Get the currently authenticated user (no args needed)
+// Returns null if user doesn't exist in Convex (for seamless auto-creation flow)
 export const getMe = query({
   args: {},
   handler: async (ctx) => {
-    return await getAuthUser(ctx);
+    return await getOptionalAuthUser(ctx);
   },
 });
 

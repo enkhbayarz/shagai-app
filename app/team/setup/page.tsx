@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Play, Edit2 } from "lucide-react";
-import { useMutation } from "convex/react";
+import { Play, Edit2, Users, User } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,30 +14,139 @@ import { Input } from "@/components/ui/input";
 interface TeamPlayer {
   name: string;
   isEditing: boolean;
+  userId?: Id<"users"> | null;
 }
 
 export default function TeamSetupPage() {
   const router = useRouter();
 
   // Game settings
-  const [playersPerTeam, setPlayersPerTeam] = useState<4 | 5 | 6>(4);
+  const [playersPerTeam, setPlayersPerTeam] = useState<4 | 5 | 6>(6);
   const [homeTeamName, setHomeTeamName] = useState("Эзэн баг");
   const [awayTeamName, setAwayTeamName] = useState("Зочин баг");
   const [isEditingHomeName, setIsEditingHomeName] = useState(false);
   const [isEditingAwayName, setIsEditingAwayName] = useState(false);
+
+  // Team search state
+  const [selectedHomeClanId, setSelectedHomeClanId] =
+    useState<Id<"clans"> | null>(null);
+  const [selectedAwayClanId, setSelectedAwayClanId] =
+    useState<Id<"clans"> | null>(null);
+
+  // Player search state - track which player is being edited
+  const [activeHomePlayerIndex, setActiveHomePlayerIndex] = useState<
+    number | null
+  >(null);
+  const [activeAwayPlayerIndex, setActiveAwayPlayerIndex] = useState<
+    number | null
+  >(null);
 
   // Generate default player names
   const generatePlayers = (count: number): TeamPlayer[] =>
     Array.from({ length: count }, (_, i) => ({
       name: `Тоглогч ${i + 1}`,
       isEditing: false,
+      userId: null,
     }));
 
-  const [homePlayers, setHomePlayers] = useState<TeamPlayer[]>(generatePlayers(4));
-  const [awayPlayers, setAwayPlayers] = useState<TeamPlayer[]>(generatePlayers(4));
+  const [homePlayers, setHomePlayers] = useState<TeamPlayer[]>(
+    generatePlayers(6),
+  );
+  const [awayPlayers, setAwayPlayers] = useState<TeamPlayer[]>(
+    generatePlayers(6),
+  );
   const [isCreating, setIsCreating] = useState(false);
 
   const createTeamGame = useMutation(api.teamGames.create);
+
+  // Team search queries (triggered when editing and 2+ chars)
+  const homeSearchResults = useQuery(
+    api.teams.search,
+    isEditingHomeName && homeTeamName.length >= 2
+      ? { query: homeTeamName }
+      : "skip",
+  );
+  const awaySearchResults = useQuery(
+    api.teams.search,
+    isEditingAwayName && awayTeamName.length >= 2
+      ? { query: awayTeamName }
+      : "skip",
+  );
+
+  // Player search queries - use existing api.users.search
+  const homePlayerSearchQuery =
+    activeHomePlayerIndex !== null
+      ? (homePlayers[activeHomePlayerIndex]?.name ?? "")
+      : "";
+  const awayPlayerSearchQuery =
+    activeAwayPlayerIndex !== null
+      ? (awayPlayers[activeAwayPlayerIndex]?.name ?? "")
+      : "";
+
+  const homePlayerSearchResults = useQuery(
+    api.users.search,
+    activeHomePlayerIndex !== null && homePlayerSearchQuery.length >= 2
+      ? { query: homePlayerSearchQuery }
+      : "skip",
+  );
+  const awayPlayerSearchResults = useQuery(
+    api.users.search,
+    activeAwayPlayerIndex !== null && awayPlayerSearchQuery.length >= 2
+      ? { query: awayPlayerSearchQuery }
+      : "skip",
+  );
+
+  // Handle team selection from search
+  const handleSelectHomeTeam = (team: {
+    _id: Id<"clans">;
+    name: string;
+    tag: string;
+  }) => {
+    setHomeTeamName(team.name);
+    setSelectedHomeClanId(team._id);
+    setIsEditingHomeName(false);
+  };
+
+  const handleSelectAwayTeam = (team: {
+    _id: Id<"clans">;
+    name: string;
+    tag: string;
+  }) => {
+    setAwayTeamName(team.name);
+    setSelectedAwayClanId(team._id);
+    setIsEditingAwayName(false);
+  };
+
+  // Handle player selection from search
+  const handleSelectHomePlayer = (
+    index: number,
+    user: { _id: Id<"users">; fullName?: string | null },
+  ) => {
+    const updated = [...homePlayers];
+    updated[index] = {
+      ...updated[index],
+      name: user.fullName || "Unknown",
+      userId: user._id,
+      isEditing: false,
+    };
+    setHomePlayers(updated);
+    setActiveHomePlayerIndex(null);
+  };
+
+  const handleSelectAwayPlayer = (
+    index: number,
+    user: { _id: Id<"users">; fullName?: string | null },
+  ) => {
+    const updated = [...awayPlayers];
+    updated[index] = {
+      ...updated[index],
+      name: user.fullName || "Unknown",
+      userId: user._id,
+      isEditing: false,
+    };
+    setAwayPlayers(updated);
+    setActiveAwayPlayerIndex(null);
+  };
 
   // Handle player count change
   const handlePlayerCountChange = (count: 4 | 5 | 6) => {
@@ -49,7 +159,7 @@ export default function TeamSetupPage() {
   const handlePlayerNameChange = (
     team: "home" | "away",
     index: number,
-    name: string
+    name: string,
   ) => {
     if (team === "home") {
       const updated = [...homePlayers];
@@ -66,11 +176,17 @@ export default function TeamSetupPage() {
   const togglePlayerEdit = (team: "home" | "away", index: number) => {
     if (team === "home") {
       const updated = [...homePlayers];
-      updated[index] = { ...updated[index], isEditing: !updated[index].isEditing };
+      updated[index] = {
+        ...updated[index],
+        isEditing: !updated[index].isEditing,
+      };
       setHomePlayers(updated);
     } else {
       const updated = [...awayPlayers];
-      updated[index] = { ...updated[index], isEditing: !updated[index].isEditing };
+      updated[index] = {
+        ...updated[index],
+        isEditing: !updated[index].isEditing,
+      };
       setAwayPlayers(updated);
     }
   };
@@ -85,12 +201,16 @@ export default function TeamSetupPage() {
         playersPerTeam,
         homeTeamName,
         awayTeamName,
+        homeClanId: selectedHomeClanId ?? undefined,
+        awayClanId: selectedAwayClanId ?? undefined,
         homeTeamPlayers: homePlayers.map((p) => ({
           name: p.name,
+          userId: p.userId ?? undefined,
           isSubstitute: false,
         })),
         awayTeamPlayers: awayPlayers.map((p) => ({
           name: p.name,
+          userId: p.userId ?? undefined,
           isSubstitute: false,
         })),
       });
@@ -128,7 +248,7 @@ export default function TeamSetupPage() {
                 Тоглогчдын тоо
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {([4, 5, 6] as const).map((num) => (
+                {([6, 5, 4] as const).map((num) => (
                   <Button
                     key={num}
                     variant={playersPerTeam === num ? "default" : "outline"}
@@ -154,113 +274,147 @@ export default function TeamSetupPage() {
           transition={{ delay: 0.2 }}
           className="grid grid-cols-2 gap-3"
         >
-          {/* Home Team */}
-          <Card className="glass border-blue-200">
-            <CardContent className="py-4">
-              {/* Team Name */}
-              <div className="flex items-center justify-center gap-1 mb-3">
-                <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-                  Э
-                </div>
-                {isEditingHomeName ? (
-                  <Input
-                    value={homeTeamName}
-                    onChange={(e) => setHomeTeamName(e.target.value)}
-                    onBlur={() => setIsEditingHomeName(false)}
-                    onKeyDown={(e) => e.key === "Enter" && setIsEditingHomeName(false)}
-                    className="h-7 text-sm font-medium text-center w-24"
-                    autoFocus
-                  />
-                ) : (
-                  <button
-                    onClick={() => setIsEditingHomeName(true)}
-                    className="text-sm font-medium flex items-center gap-1 hover:text-blue-600 transition-colors"
-                  >
-                    {homeTeamName}
-                    <Edit2 className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-
-              {/* Players */}
-              <div className="space-y-1.5">
-                {homePlayers.map((player, index) => (
-                  <div key={index}>
-                    {player.isEditing ? (
-                      <Input
-                        value={player.name}
-                        onChange={(e) =>
-                          handlePlayerNameChange("home", index, e.target.value)
-                        }
-                        onBlur={() => togglePlayerEdit("home", index)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && togglePlayerEdit("home", index)
-                        }
-                        className="h-8 text-xs text-center"
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        onClick={() => togglePlayerEdit("home", index)}
-                        className="w-full text-xs bg-blue-50 hover:bg-blue-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between"
-                      >
-                        <span>
-                          {index + 1}. {player.name}
-                        </span>
-                        <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Away Team */}
+          {/* Away Team (Left) */}
           <Card className="glass border-orange-200">
             <CardContent className="py-4">
               {/* Team Name */}
-              <div className="flex items-center justify-center gap-1 mb-3">
-                <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
-                  З
+              <div className="relative mb-3">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
+                    З
+                  </div>
+                  {isEditingAwayName ? (
+                    <Input
+                      value={awayTeamName}
+                      onChange={(e) => {
+                        setAwayTeamName(e.target.value);
+                        setSelectedAwayClanId(null); // Clear selection when typing
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown item
+                        setTimeout(() => setIsEditingAwayName(false), 150);
+                      }}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setIsEditingAwayName(false)
+                      }
+                      className="h-7 text-sm font-medium text-center w-24"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingAwayName(true)}
+                      className="text-sm font-medium flex items-center gap-1 hover:text-orange-600 transition-colors"
+                    >
+                      {awayTeamName}
+                      <Edit2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  )}
                 </div>
-                {isEditingAwayName ? (
-                  <Input
-                    value={awayTeamName}
-                    onChange={(e) => setAwayTeamName(e.target.value)}
-                    onBlur={() => setIsEditingAwayName(false)}
-                    onKeyDown={(e) => e.key === "Enter" && setIsEditingAwayName(false)}
-                    className="h-7 text-sm font-medium text-center w-24"
-                    autoFocus
-                  />
-                ) : (
-                  <button
-                    onClick={() => setIsEditingAwayName(true)}
-                    className="text-sm font-medium flex items-center gap-1 hover:text-orange-600 transition-colors"
-                  >
-                    {awayTeamName}
-                    <Edit2 className="w-3 h-3 text-muted-foreground" />
-                  </button>
-                )}
+                {/* Search Dropdown */}
+                {isEditingAwayName &&
+                  awaySearchResults &&
+                  awaySearchResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-10 overflow-hidden"
+                    >
+                      {awaySearchResults
+                        .filter((team) => team._id !== selectedHomeClanId)
+                        .slice(0, 5)
+                        .map((team) => (
+                        <button
+                          key={team._id}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectAwayTeam(team)}
+                          className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                        >
+                          <Users className="w-3 h-3 text-orange-400" />
+                          <span className="font-medium">{team.name}</span>
+                          <span className="text-muted-foreground">
+                            [{team.tag}]
+                          </span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
               </div>
 
               {/* Players */}
               <div className="space-y-1.5">
                 {awayPlayers.map((player, index) => (
-                  <div key={index}>
+                  <div key={index} className="relative">
                     {player.isEditing ? (
-                      <Input
-                        value={player.name}
-                        onChange={(e) =>
-                          handlePlayerNameChange("away", index, e.target.value)
-                        }
-                        onBlur={() => togglePlayerEdit("away", index)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && togglePlayerEdit("away", index)
-                        }
-                        className="h-8 text-xs text-center"
-                        autoFocus
-                      />
+                      <>
+                        <Input
+                          value={player.name}
+                          onChange={(e) => {
+                            // Update name and clear userId in one operation
+                            const updated = [...awayPlayers];
+                            updated[index] = {
+                              ...updated[index],
+                              name: e.target.value,
+                              userId: null,
+                            };
+                            setAwayPlayers(updated);
+                          }}
+                          onFocus={() => setActiveAwayPlayerIndex(index)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              togglePlayerEdit("away", index);
+                              setActiveAwayPlayerIndex(null);
+                            }, 150);
+                          }}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && togglePlayerEdit("away", index)
+                          }
+                          className="h-8 text-xs text-center"
+                          autoFocus
+                        />
+                        {/* Player Search Dropdown */}
+                        {activeAwayPlayerIndex === index &&
+                          awayPlayerSearchResults &&
+                          awayPlayerSearchResults.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-20 overflow-hidden"
+                            >
+                              {awayPlayerSearchResults
+                                .filter(
+                                  (user) =>
+                                    !awayPlayers.some(
+                                      (p, i) =>
+                                        i !== index && p.userId === user._id,
+                                    ) &&
+                                    !homePlayers.some(
+                                      (p) => p.userId === user._id,
+                                    ),
+                                )
+                                .slice(0, 5)
+                                .map((user) => (
+                                  <button
+                                    key={user._id}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() =>
+                                      handleSelectAwayPlayer(index, user)
+                                    }
+                                    className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                                  >
+                                    <User className="w-3 h-3 text-orange-400" />
+                                    <span className="font-medium">
+                                      {user.fullName}
+                                    </span>
+                                    {user.username && (
+                                      <span className="text-muted-foreground">
+                                        @{user.username}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                            </motion.div>
+                          )}
+                      </>
                     ) : (
                       <button
                         onClick={() => togglePlayerEdit("away", index)}
@@ -277,10 +431,168 @@ export default function TeamSetupPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Home Team (Right) */}
+          <Card className="glass border-blue-200">
+            <CardContent className="py-4">
+              {/* Team Name */}
+              <div className="relative mb-3">
+                <div className="flex items-center justify-center gap-1">
+                  <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    Э
+                  </div>
+                  {isEditingHomeName ? (
+                    <Input
+                      value={homeTeamName}
+                      onChange={(e) => {
+                        setHomeTeamName(e.target.value);
+                        setSelectedHomeClanId(null); // Clear selection when typing
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown item
+                        setTimeout(() => setIsEditingHomeName(false), 150);
+                      }}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setIsEditingHomeName(false)
+                      }
+                      className="h-7 text-sm font-medium text-center w-24"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingHomeName(true)}
+                      className="text-sm font-medium flex items-center gap-1 hover:text-blue-600 transition-colors"
+                    >
+                      {homeTeamName}
+                      <Edit2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                {/* Search Dropdown */}
+                {isEditingHomeName &&
+                  homeSearchResults &&
+                  homeSearchResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-10 overflow-hidden"
+                    >
+                      {homeSearchResults
+                        .filter((team) => team._id !== selectedAwayClanId)
+                        .slice(0, 5)
+                        .map((team) => (
+                        <button
+                          key={team._id}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectHomeTeam(team)}
+                          className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                        >
+                          <Users className="w-3 h-3 text-blue-400" />
+                          <span className="font-medium">{team.name}</span>
+                          <span className="text-muted-foreground">
+                            [{team.tag}]
+                          </span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+              </div>
+
+              {/* Players */}
+              <div className="space-y-1.5">
+                {homePlayers.map((player, index) => (
+                  <div key={index} className="relative">
+                    {player.isEditing ? (
+                      <>
+                        <Input
+                          value={player.name}
+                          onChange={(e) => {
+                            // Update name and clear userId in one operation
+                            const updated = [...homePlayers];
+                            updated[index] = {
+                              ...updated[index],
+                              name: e.target.value,
+                              userId: null,
+                            };
+                            setHomePlayers(updated);
+                          }}
+                          onFocus={() => setActiveHomePlayerIndex(index)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              togglePlayerEdit("home", index);
+                              setActiveHomePlayerIndex(null);
+                            }, 150);
+                          }}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && togglePlayerEdit("home", index)
+                          }
+                          className="h-8 text-xs text-center"
+                          autoFocus
+                        />
+                        {/* Player Search Dropdown */}
+                        {activeHomePlayerIndex === index &&
+                          homePlayerSearchResults &&
+                          homePlayerSearchResults.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-20 overflow-hidden"
+                            >
+                              {homePlayerSearchResults
+                                .filter(
+                                  (user) =>
+                                    !homePlayers.some(
+                                      (p, i) =>
+                                        i !== index && p.userId === user._id,
+                                    ) &&
+                                    !awayPlayers.some(
+                                      (p) => p.userId === user._id,
+                                    ),
+                                )
+                                .slice(0, 5)
+                                .map((user) => (
+                                  <button
+                                    key={user._id}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() =>
+                                      handleSelectHomePlayer(index, user)
+                                    }
+                                    className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                                  >
+                                    <User className="w-3 h-3 text-blue-400" />
+                                    <span className="font-medium">
+                                      {user.fullName}
+                                    </span>
+                                    {user.username && (
+                                      <span className="text-muted-foreground">
+                                        @{user.username}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                            </motion.div>
+                          )}
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => togglePlayerEdit("home", index)}
+                        className="w-full text-xs bg-blue-50 hover:bg-blue-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between"
+                      >
+                        <span>
+                          {index + 1}. {player.name}
+                        </span>
+                        <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Info */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -289,7 +601,7 @@ export default function TeamSetupPage() {
           Багийн нэр, тоглогчдын нэрийг засах боломжтой.
           <br />
           Тоглолтын үед ч нэр засах боломжтой.
-        </motion.div>
+        </motion.div> */}
 
         {/* Start Button - Always enabled! */}
         <motion.div
