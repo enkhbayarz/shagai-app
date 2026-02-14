@@ -792,11 +792,6 @@ async function handleGoldenPointShot(
     return { gameEnded: true, goldenPointWinner: winner };
   };
 
-  // SPECIAL RULE: Even position (2, 4, 6, 8...) hits = IMMEDIATE WIN
-  if (isEvenPosition && isHit) {
-    return await endGame(nextShooter.team);
-  }
-
   // Check pairs after even positions
   if (isEvenPosition) {
     const oddShooter = turns[turns.length - 2]; // Previous (odd position)
@@ -807,8 +802,12 @@ async function handleGoldenPointShot(
       return await endGame(oddShooter.team);
     }
 
-    // Even hits is already handled above (immediate win)
-    // Both hit or both miss → continue to next pair
+    // Odd misses, even hits → even's team wins
+    if (oddShooter.shot === false && evenShooter.shot === true) {
+      return await endGame(evenShooter.team);
+    }
+
+    // Both hit OR both miss → continue to next pair
   }
 
   // Continue - no winner yet
