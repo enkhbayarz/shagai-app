@@ -456,6 +456,58 @@ export const recordShot = mutation({
       }
     }
 
+    // IMMEDIATE SET 1 END: Combined score reaches 30 → end set immediately
+    if (game.currentSet === 1 &&
+        currentSet.homeScore + currentSet.awayScore >= 30) {
+      // Mark phase as completed
+      currentPhase.isCompleted = true;
+      phases[game.currentPhaseIndex] = currentPhase;
+      currentSet.phases = phases;
+
+      // Calculate pulled points
+      if (currentSet.homeScore > 15) {
+        currentSet.homePulled = currentSet.homeScore - 15;
+        currentSet.awayPulled = 0;
+      } else if (currentSet.awayScore > 15) {
+        currentSet.awayPulled = currentSet.awayScore - 15;
+        currentSet.homePulled = 0;
+      } else if (currentSet.homeScore === 15 && currentSet.awayScore < 15) {
+        currentSet.homePulled = 15 - currentSet.awayScore;
+        currentSet.awayPulled = 0;
+      } else if (currentSet.awayScore === 15 && currentSet.homeScore < 15) {
+        currentSet.awayPulled = 15 - currentSet.homeScore;
+        currentSet.homePulled = 0;
+      } else {
+        currentSet.homePulled = 0;
+        currentSet.awayPulled = 0;
+      }
+
+      currentSet.winner = currentSet.homeScore >= currentSet.awayScore ? "home" : "away";
+      currentSet.isCompleted = true;
+      sets[currentSetIndex] = currentSet;
+
+      // Create Set 2
+      const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1, 2);
+      sets.push({
+        setNumber: 2,
+        homeSide: "left",
+        awaySide: "right",
+        homeScore: 0,
+        awayScore: 0,
+        phases: [initialPhaseSet2],
+        isCompleted: false,
+      });
+
+      await ctx.db.patch(args.gameId, {
+        sets,
+        currentSet: 2,
+        currentPhaseIndex: 0,
+        currentShooterIndex: 0,
+        currentShotInTurn: 0,
+      });
+      return { setEnded: true, newSet: 2 };
+    }
+
     // Set 2 Early Win Detection: First team to reach 31 total wins immediately
     if (game.currentSet === 2) {
       const set1 = game.sets[0];

@@ -199,7 +199,7 @@ export default function TeamGamePage() {
       </motion.header>
 
       {/* Score Header */}
-      <div className="px-4 py-4">
+      <div className="sticky top-14 z-10 bg-white px-4 py-4">
         <TeamScoreHeader
           homeClanName={game.homeClanName}
           homeClanTag={game.homeClanTag}
@@ -236,7 +236,8 @@ export default function TeamGamePage() {
 
       {/* Phases List */}
       <div ref={scrollRef} className="px-4 space-y-4">
-        {currentSet?.phases.map((phase, phaseIndex) => {
+        {[...(currentSet?.phases || [])].reverse().map((phase, reversedIndex) => {
+          const phaseIndex = (currentSet?.phases.length ?? 0) - 1 - reversedIndex;
           const isActive = phaseIndex === game.currentPhaseIndex && !isFinished && !isGoldenPoint;
 
           return (
