@@ -305,6 +305,31 @@ export default function TeamGamePage() {
         </motion.div>
       )}
 
+      {/* Golden Point Turns Display - at TOP */}
+      {isGoldenPoint && game.goldenPoint && (
+        <div className="px-4 mb-4">
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+            <h3 className="font-bold text-center mb-3">Алтан оноо</h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              {game.goldenPoint.turns.map((turn, i) => (
+                <div
+                  key={i}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                    turn.shot === true
+                      ? "bg-emerald-500"
+                      : turn.shot === false
+                      ? "bg-red-500"
+                      : "bg-gray-300"
+                  }`}
+                >
+                  {turn.shot === true ? "O" : turn.shot === false ? "X" : "?"}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Phases List */}
       <div ref={scrollRef} className="px-4 space-y-4">
         {[...(currentSet?.phases || [])].reverse().map((phase, reversedIndex) => {
@@ -332,31 +357,6 @@ export default function TeamGamePage() {
           );
         })}
       </div>
-
-      {/* Golden Point Turns Display */}
-      {isGoldenPoint && game.goldenPoint && (
-        <div className="px-4 mt-4">
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
-            <h3 className="font-bold text-center mb-3">Алтан оноо</h3>
-            <div className="flex flex-wrap justify-center gap-2">
-              {game.goldenPoint.turns.map((turn, i) => (
-                <div
-                  key={i}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                    turn.shot === true
-                      ? "bg-emerald-500"
-                      : turn.shot === false
-                      ? "bg-red-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  {turn.shot === true ? "O" : turn.shot === false ? "X" : "?"}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Game Controls */}
       {!isFinished && currentShooter && (
