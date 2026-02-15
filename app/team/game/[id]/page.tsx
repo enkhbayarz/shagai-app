@@ -65,12 +65,10 @@ export default function TeamGamePage() {
   }, [game?.currentPhaseIndex]);
 
   // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
-  // ONLY applies to: Set 1, niileg phase, first cycle
+  // ONLY applies to: niileg phase, first cycle (both Set 1 and Set 2)
   useEffect(() => {
     if (!game || game.status === "finished" || isRecording) return;
     if (game.playersPerTeam !== 6) return;
-    // Only for Set 1 (1-р өрөг)
-    if (game.currentSet !== 1) return;
 
     const currentSetData = game.sets[game.currentSet - 1];
     const currentPhaseData = currentSetData?.phases[game.currentPhaseIndex];
@@ -163,13 +161,11 @@ export default function TeamGamePage() {
     }
   };
 
-  // Determine if skip button should be shown (6v6, Set 1, first cycle of niileg only)
+  // Determine if skip button should be shown (6v6, first cycle of niileg only)
   const shouldShowSkipButton = () => {
     if (!currentPhase || !currentShooter) return false;
     // Only for 6v6 games
     if (game.playersPerTeam !== 6) return false;
-    // Only for Set 1 (1-р өрөг)
-    if (game.currentSet !== 1) return false;
     // Only for niileg phase (НИЙЛЭГ ҮЕ)
     if (currentPhase.phaseType !== "niileg") return false;
     // Only for first round (shot index 0)
@@ -303,31 +299,6 @@ export default function TeamGamePage() {
           <div className="text-lg font-bold">АЛТАН ОНОО</div>
           <div className="text-sm opacity-90">Эхнийх оногдуулж, дараагийнх алдвал ялна!</div>
         </motion.div>
-      )}
-
-      {/* Golden Point Turns Display - at TOP */}
-      {isGoldenPoint && game.goldenPoint && (
-        <div className="px-4 mb-4">
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
-            <h3 className="font-bold text-center mb-3">Алтан оноо</h3>
-            <div className="flex flex-wrap justify-center gap-2">
-              {game.goldenPoint.turns.map((turn, i) => (
-                <div
-                  key={i}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                    turn.shot === true
-                      ? "bg-emerald-500"
-                      : turn.shot === false
-                      ? "bg-red-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  {turn.shot === true ? "O" : turn.shot === false ? "X" : "?"}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Phases List */}

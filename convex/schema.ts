@@ -247,6 +247,7 @@ export default defineSchema({
           })
         ),
         currentTurnIndex: v.number(),
+        startedWithOddRemaining: v.boolean(), // ODD = first shooter can win alone, EVEN = pairs
       })
     ),
 

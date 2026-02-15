@@ -174,33 +174,6 @@ function getPhasesForPlayerCount(playersPerTeam: 3 | 4 | 5 | 6): PhaseType[] {
 }
 
 /**
- * Generate the full shooter order for Golden Point
- * Combines ALL players from ALL phases
- * For 3v3: 6 players (4 from niileg + 2 from merge)
- * For 4v4: 8 players (4 from niileg + 4 from shuvtraga)
- * For 5v5: 10 players (4 + 4 + 2)
- * For 6v6: 12 players (4 + 4 + 4)
- *
- * Uses Set 2 direction (sides are swapped)
- */
-function generateGoldenPointShooterOrder(playersPerTeam: 3 | 4 | 5 | 6): ShooterConfig[] {
-  const allShooters: ShooterConfig[] = [];
-  const phaseTypes = getPhasesForPlayerCount(playersPerTeam);
-
-  for (let i = 0; i < phaseTypes.length; i++) {
-    const phaseType = phaseTypes[i];
-    const phaseNumber = i + 1;
-    const direction = getPhaseDirection(phaseNumber);
-    // Use setNumber=2 since golden point happens after Set 2 (sides are swapped)
-    // Use cycle=2 for full shooter list (not the 6v6 first cycle special case)
-    const shooters = generateShooterOrder(playersPerTeam, phaseType, direction, 2, 2);
-    allShooters.push(...shooters);
-  }
-
-  return allShooters;
-}
-
-/**
  * Create initial phase structure for a set
  */
 function createInitialPhase(
@@ -592,6 +565,110 @@ export const recordShot = mutation({
         });
         return { gameEnded: true, winner };
       }
+
+      // IMMEDIATE SET 2 END: Combined score in Set 2 reaches 30 → end set, check for golden point
+      if (currentSet.homeScore + currentSet.awayScore >= 30) {
+        // Update phase with current shot
+        shooters[game.currentShooterIndex] = currentShooter;
+        currentPhase.shooters = shooters;
+        phases[game.currentPhaseIndex] = currentPhase;
+        currentSet.phases = phases;
+
+        // Calculate pulled points for Set 2
+        if (currentSet.homeScore > 15) {
+          currentSet.homePulled = currentSet.homeScore - 15;
+          currentSet.awayPulled = 0;
+        } else if (currentSet.awayScore > 15) {
+          currentSet.awayPulled = currentSet.awayScore - 15;
+          currentSet.homePulled = 0;
+        } else {
+          currentSet.homePulled = 0;
+          currentSet.awayPulled = 0;
+        }
+
+        currentSet.isCompleted = true;
+        sets[currentSetIndex] = currentSet;
+
+        const homeTotalPulled = (set1.homePulled ?? 0) + (currentSet.homePulled ?? 0);
+        const awayTotalPulled = (set1.awayPulled ?? 0) + (currentSet.awayPulled ?? 0);
+
+        if (homeTotalPulled === awayTotalPulled) {
+          // Tied - need golden point
+          // ADVANCE state so first golden point shot doesn't overwrite the triggering shot
+          let nextShooterIndex = game.currentShooterIndex + 1;
+          let nextShotInTurn = game.currentShotInTurn;
+          let nextPhaseIndex = game.currentPhaseIndex;
+          let shootersInNextPhase = currentPhase.shooters.length;
+
+          if (nextShooterIndex >= currentPhase.shooters.length) {
+            nextShooterIndex = 0;
+            nextShotInTurn += 1;
+
+            if (nextShotInTurn >= 4) {
+              // Phase is complete, create next phase
+              nextShotInTurn = 0;
+              const phaseTypes = getPhasesForPlayerCount(game.playersPerTeam);
+              const currentPhaseTypeIndex = phaseTypes.indexOf(currentPhase.phaseType as PhaseType);
+              const nextPhaseTypeIndex = (currentPhaseTypeIndex + 1) % phaseTypes.length;
+              const nextCycle = nextPhaseTypeIndex === 0 ? currentPhase.cycle + 1 : currentPhase.cycle;
+              const nextPhaseType = phaseTypes[nextPhaseTypeIndex];
+              const nextPhaseNumber = phases.length + 1;
+
+              const newPhase = createInitialPhase(
+                game.playersPerTeam,
+                nextPhaseType,
+                nextPhaseNumber,
+                nextCycle,
+                game.currentSet
+              );
+              phases.push(newPhase);
+              currentSet.phases = phases;
+              sets[currentSetIndex] = currentSet;
+              nextPhaseIndex = phases.length - 1;
+              shootersInNextPhase = newPhase.shooters.length;
+            }
+          }
+
+          // Calculate remaining players for golden point mode
+          // ODD remaining = first shooter can win alone with HIT
+          // EVEN remaining = pairs mode (both must shoot, then compare)
+          const remainingPlayers = shootersInNextPhase - nextShooterIndex;
+          const startedWithOddRemaining = remainingPlayers % 2 === 1;
+
+          await ctx.db.patch(args.gameId, {
+            sets,
+            goldenPoint: {
+              isActive: true,
+              turns: [],
+              currentTurnIndex: 0,
+              startedWithOddRemaining,
+            },
+            currentShooterIndex: nextShooterIndex,
+            currentShotInTurn: nextShotInTurn,
+            currentPhaseIndex: nextPhaseIndex,
+          });
+          return { setEnded: true, needsGoldenPoint: true };
+        } else {
+          // Winner determined by pulled points
+          const winner = homeTotalPulled > awayTotalPulled ? "home" : "away";
+          await ctx.db.patch(args.gameId, {
+            sets,
+            status: "finished",
+            finishedAt: Date.now(),
+            result: {
+              winner,
+              homeSet1Score: set1.homeScore,
+              awaySet1Score: set1.awayScore,
+              homeSet2Score: currentSet.homeScore,
+              awaySet2Score: currentSet.awayScore,
+              homeTotalPulled,
+              awayTotalPulled,
+              wasGoldenPoint: false,
+            },
+          });
+          return { gameEnded: true, winner };
+        }
+      }
     }
 
     // Advance state - ROTATION MODE
@@ -698,6 +775,11 @@ export const recordShot = mutation({
 
         if (homeTotalPulled === awayTotalPulled) {
           // Tie - need golden point
+          // Calculate remaining players for golden point mode
+          const goldenPhase = sets[1].phases[nextPhaseIndex];
+          const remainingPlayers = goldenPhase.shooters.length - nextShooterIndex;
+          const startedWithOddRemaining = remainingPlayers % 2 === 1;
+
           await ctx.db.patch(args.gameId, {
             sets,
             currentSet: 2,
@@ -708,6 +790,7 @@ export const recordShot = mutation({
               isActive: true,
               turns: [],
               currentTurnIndex: 0,
+              startedWithOddRemaining,
             },
           });
           return { setEnded: true, needsGoldenPoint: true };
@@ -755,26 +838,40 @@ async function handleGoldenPointShot(
   const goldenPoint = { ...game.goldenPoint! };
   const turns = [...goldenPoint.turns];
 
-  // Generate full shooter order for golden point (all players from all phases)
-  const shooterOrder = generateGoldenPointShooterOrder(game.playersPerTeam);
-  const nextIndex = turns.length % shooterOrder.length;
-  const nextShooter = shooterOrder[nextIndex];
+  // Use current game state (same as normal play)
+  const currentSetIndex = game.currentSet - 1;
+  const sets = [...game.sets];
+  const currentSet = { ...sets[currentSetIndex] };
+  const phases = [...currentSet.phases];
+  const currentPhase = { ...phases[game.currentPhaseIndex] };
+  const shooters = [...currentPhase.shooters];
+  const currentShooter = { ...shooters[game.currentShooterIndex] };
+  const shots = [...currentShooter.shots];
 
-  // Position is 1-indexed (1, 2, 3, 4, ...)
-  const position = turns.length + 1;
-  const isEvenPosition = position % 2 === 0;
+  // Record shot to current slot (using game.currentShotInTurn)
+  shots[game.currentShotInTurn] = isHit;
+  currentShooter.shots = shots;
+  shooters[game.currentShooterIndex] = currentShooter;
+  currentPhase.shooters = shooters;
+  phases[game.currentPhaseIndex] = currentPhase;
+  currentSet.phases = phases;
+  sets[currentSetIndex] = currentSet;
 
+  // Track in golden point turns for winning logic
   turns.push({
-    team: nextShooter.team,
-    playerIndex: nextShooter.playerIndex,
+    team: currentShooter.team,
+    playerIndex: currentShooter.playerIndex,
     shot: isHit,
   });
 
+  const turnsCount = turns.length;
+
   // Helper function to end the game
   const endGame = async (winner: Team) => {
-    const set1 = game.sets[0];
-    const set2 = game.sets[1];
+    const set1 = sets[0];
+    const set2 = sets[1];
     await ctx.db.patch(game._id, {
+      sets,
       goldenPoint: { ...goldenPoint, turns },
       status: "finished",
       finishedAt: Date.now(),
@@ -792,28 +889,102 @@ async function handleGoldenPointShot(
     return { gameEnded: true, goldenPointWinner: winner };
   };
 
-  // Check pairs after even positions
-  if (isEvenPosition) {
-    const oddShooter = turns[turns.length - 2]; // Previous (odd position)
-    const evenShooter = turns[turns.length - 1]; // Current (even position)
+  // Golden Point Winning Logic:
+  // ODD remaining = first shooter can win alone with HIT
+  // EVEN remaining = pairs mode (both must shoot, then compare)
+  const startedOdd = goldenPoint.startedWithOddRemaining;
 
-    // Odd hits, even misses → odd's team wins
-    if (oddShooter.shot === true && evenShooter.shot === false) {
-      return await endGame(oddShooter.team);
+  if (startedOdd) {
+    if (turnsCount === 1) {
+      // ODD MODE: First shot can win alone with HIT
+      if (isHit) {
+        return await endGame(currentShooter.team);
+      }
+      // Miss - continue to EVEN mode (remaining players are now even)
+    } else {
+      // EVEN MODE after ODD resolved
+      // Pairs start from turn 2: (2,3), (4,5), (6,7)...
+      const evenModePosition = turnsCount - 1; // subtract the ODD shot
+      if (evenModePosition % 2 === 0) {
+        // End of a pair - check for winner
+        const shot1 = turns[turnsCount - 2];
+        const shot2 = turns[turnsCount - 1];
+        if (shot1.shot !== shot2.shot) {
+          // One hit, one miss - hitting team wins
+          const winner = shot1.shot ? shot1.team : shot2.team;
+          return await endGame(winner);
+        }
+        // Both same - continue to next pair
+      }
     }
-
-    // Odd misses, even hits → even's team wins
-    if (oddShooter.shot === false && evenShooter.shot === true) {
-      return await endGame(evenShooter.team);
+  } else {
+    // Started EVEN - pure pairs mode
+    // Pairs: (1,2), (3,4), (5,6)...
+    if (turnsCount % 2 === 0) {
+      // End of a pair - check for winner
+      const shot1 = turns[turnsCount - 2];
+      const shot2 = turns[turnsCount - 1];
+      if (shot1.shot !== shot2.shot) {
+        // One hit, one miss - hitting team wins
+        const winner = shot1.shot ? shot1.team : shot2.team;
+        return await endGame(winner);
+      }
+      // Both same - continue to next pair
     }
+  }
 
-    // Both hit OR both miss → continue to next pair
+  // Advance state - same rotation as normal play
+  let nextShooterIndex = game.currentShooterIndex + 1;
+  let nextShotInTurn = game.currentShotInTurn;
+  let nextPhaseIndex = game.currentPhaseIndex;
+
+  // Check if all shooters have completed this round
+  if (nextShooterIndex >= currentPhase.shooters.length) {
+    // All shooters have shot once in this round, advance to next round
+    nextShooterIndex = 0;
+    nextShotInTurn += 1;
+
+    // Check if all 4 rounds are complete (phase is done)
+    if (nextShotInTurn >= 4) {
+      currentPhase.isCompleted = true;
+      phases[game.currentPhaseIndex] = currentPhase;
+      currentSet.phases = phases;
+      sets[currentSetIndex] = currentSet;
+
+      nextShotInTurn = 0;
+
+      // Create next phase for golden point to continue
+      const phaseTypes = getPhasesForPlayerCount(game.playersPerTeam);
+      const currentPhaseTypeIndex = phaseTypes.indexOf(currentPhase.phaseType as PhaseType);
+      const nextPhaseTypeIndex = (currentPhaseTypeIndex + 1) % phaseTypes.length;
+      const nextCycle = nextPhaseTypeIndex === 0 ? currentPhase.cycle + 1 : currentPhase.cycle;
+      const nextPhaseType = phaseTypes[nextPhaseTypeIndex];
+      const nextPhaseNumber = phases.length + 1;
+
+      const newPhase = createInitialPhase(
+        game.playersPerTeam,
+        nextPhaseType,
+        nextPhaseNumber,
+        nextCycle,
+        game.currentSet
+      );
+      phases.push(newPhase);
+      currentSet.phases = phases;
+      sets[currentSetIndex] = currentSet;
+      nextPhaseIndex = phases.length - 1;
+    }
   }
 
   // Continue - no winner yet
   goldenPoint.turns = turns;
   goldenPoint.currentTurnIndex = turns.length;
-  await ctx.db.patch(game._id, { goldenPoint });
+  await ctx.db.patch(game._id, {
+    sets,
+    goldenPoint,
+    currentPhaseIndex: nextPhaseIndex,
+    currentShooterIndex: nextShooterIndex,
+    currentShotInTurn: nextShotInTurn,
+  });
   return { goldenPointContinues: true };
 }
 
