@@ -7,7 +7,7 @@ interface TeamPlayerCardProps {
   name: string;
   team: "home" | "away";
   playerIndex: number;
-  shots: (boolean | null)[];
+  shots: (boolean | null | "skip")[];
   isCurrentShooter?: boolean;
   currentShotIndex?: number;
   onEditShot?: (shotIndex: number) => void;
