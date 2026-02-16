@@ -55,6 +55,17 @@ export default function TeamSetupPage() {
   const [awayPlayers, setAwayPlayers] = useState<TeamPlayer[]>(
     generatePlayers(6),
   );
+  // Bench players (one per team)
+  const [homeBenchPlayer, setHomeBenchPlayer] = useState<TeamPlayer>({
+    name: "Нөөц",
+    isEditing: false,
+    userId: null,
+  });
+  const [awayBenchPlayer, setAwayBenchPlayer] = useState<TeamPlayer>({
+    name: "Нөөц",
+    isEditing: false,
+    userId: null,
+  });
   const [isCreating, setIsCreating] = useState(false);
 
   const createTeamGame = useMutation(api.teamGames.create);
@@ -197,22 +208,41 @@ export default function TeamSetupPage() {
     setIsCreating(true);
 
     try {
+      // Build player arrays with bench player at the end (isSubstitute: true)
+      const homeTeamPlayersWithBench = [
+        ...homePlayers.map((p) => ({
+          name: p.name,
+          userId: p.userId ?? undefined,
+          isSubstitute: false,
+        })),
+        {
+          name: homeBenchPlayer.name,
+          userId: homeBenchPlayer.userId ?? undefined,
+          isSubstitute: true,
+        },
+      ];
+
+      const awayTeamPlayersWithBench = [
+        ...awayPlayers.map((p) => ({
+          name: p.name,
+          userId: p.userId ?? undefined,
+          isSubstitute: false,
+        })),
+        {
+          name: awayBenchPlayer.name,
+          userId: awayBenchPlayer.userId ?? undefined,
+          isSubstitute: true,
+        },
+      ];
+
       const gameId = await createTeamGame({
         playersPerTeam,
         homeTeamName,
         awayTeamName,
         homeClanId: selectedHomeClanId ?? undefined,
         awayClanId: selectedAwayClanId ?? undefined,
-        homeTeamPlayers: homePlayers.map((p) => ({
-          name: p.name,
-          userId: p.userId ?? undefined,
-          isSubstitute: false,
-        })),
-        awayTeamPlayers: awayPlayers.map((p) => ({
-          name: p.name,
-          userId: p.userId ?? undefined,
-          isSubstitute: false,
-        })),
+        homeTeamPlayers: homeTeamPlayersWithBench,
+        awayTeamPlayers: awayTeamPlayersWithBench,
       });
 
       router.push(`/team/game/${gameId}`);
@@ -428,6 +458,29 @@ export default function TeamSetupPage() {
                     )}
                   </div>
                 ))}
+
+                {/* Bench Player */}
+                <div className="mt-2 pt-2 border-t border-orange-200">
+                  <div className="text-[10px] text-orange-600 font-medium mb-1">Нөөц тоглогч</div>
+                  {awayBenchPlayer.isEditing ? (
+                    <Input
+                      value={awayBenchPlayer.name}
+                      onChange={(e) => setAwayBenchPlayer({ ...awayBenchPlayer, name: e.target.value, userId: null })}
+                      onBlur={() => setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: false })}
+                      onKeyDown={(e) => e.key === "Enter" && setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: false })}
+                      className="h-8 text-xs text-center"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: true })}
+                      className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
+                    >
+                      <span>🪑 {awayBenchPlayer.name}</span>
+                      <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
+                    </button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -586,6 +639,29 @@ export default function TeamSetupPage() {
                     )}
                   </div>
                 ))}
+
+                {/* Bench Player */}
+                <div className="mt-2 pt-2 border-t border-blue-200">
+                  <div className="text-[10px] text-blue-600 font-medium mb-1">Нөөц тоглогч</div>
+                  {homeBenchPlayer.isEditing ? (
+                    <Input
+                      value={homeBenchPlayer.name}
+                      onChange={(e) => setHomeBenchPlayer({ ...homeBenchPlayer, name: e.target.value, userId: null })}
+                      onBlur={() => setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: false })}
+                      onKeyDown={(e) => e.key === "Enter" && setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: false })}
+                      className="h-8 text-xs text-center"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: true })}
+                      className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
+                    >
+                      <span>🪑 {homeBenchPlayer.name}</span>
+                      <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
+                    </button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

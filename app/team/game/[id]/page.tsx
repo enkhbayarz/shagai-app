@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, X, Search, User } from "lucide-react";
+import { ArrowLeft, X, Search, User, RefreshCw } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -48,6 +48,11 @@ export default function TeamGamePage() {
   const editShot = useMutation(api.teamGames.editShot);
   const updateTeamName = useMutation(api.teamGames.updateTeamName);
   const updatePlayerName = useMutation(api.teamGames.updatePlayerName);
+  const substitutePlayer = useMutation(api.teamGames.substitutePlayer);
+
+  // Substitution state
+  const [substitutingTeam, setSubstitutingTeam] = useState<"home" | "away" | null>(null);
+  const [isSubstituting, setIsSubstituting] = useState(false);
 
   // Search users for player name editing
   const searchResults = useQuery(
@@ -256,6 +261,47 @@ export default function TeamGamePage() {
     setSelectedUserId(undefined);
   };
 
+  // Handle substitution
+  const handleSubstitute = async (outPlayerIndex: number) => {
+    if (!substitutingTeam || isSubstituting) return;
+    setIsSubstituting(true);
+    try {
+      await substitutePlayer({
+        gameId,
+        team: substitutingTeam,
+        outPlayerIndex,
+      });
+      setSubstitutingTeam(null);
+    } catch (error) {
+      console.error("Failed to substitute player:", error);
+    } finally {
+      setIsSubstituting(false);
+    }
+  };
+
+  // Get bench player for a team
+  const getBenchPlayer = (team: "home" | "away") => {
+    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    return players.find(p => p.isSubstitute === true);
+  };
+
+  // Check if team can substitute
+  const canSubstitute = (team: "home" | "away") => {
+    if (isFinished) return false;
+    const subUsed = team === "home" ? game.homeSubstitutionUsed : game.awaySubstitutionUsed;
+    if (subUsed) return false;
+    const benchPlayer = getBenchPlayer(team);
+    return benchPlayer !== undefined;
+  };
+
+  // Get starters (non-bench players) for substitution modal
+  const getStarters = (team: "home" | "away") => {
+    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    return players
+      .map((p, index) => ({ ...p, index }))
+      .filter(p => !p.isSubstitute);
+  };
+
   const isFinished = game.status === "finished";
   const isGoldenPoint = game.goldenPoint?.isActive;
 
@@ -313,6 +359,40 @@ export default function TeamGamePage() {
           }
           onEditTeamName={!isFinished ? handleEditTeamName : undefined}
         />
+
+        {/* Substitution Buttons */}
+        {!isFinished && (canSubstitute("home") || canSubstitute("away")) && (
+          <div className="flex justify-between mt-3 gap-2">
+            {/* Home team substitute button - left side */}
+            <div className="flex-1">
+              {canSubstitute("home") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                  onClick={() => setSubstitutingTeam("home")}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Солих ({getBenchPlayer("home")?.name})
+                </Button>
+              )}
+            </div>
+            {/* Away team substitute button - right side */}
+            <div className="flex-1">
+              {canSubstitute("away") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                  onClick={() => setSubstitutingTeam("away")}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Солих ({getBenchPlayer("away")?.name})
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Golden Point Banner */}
@@ -479,6 +559,79 @@ export default function TeamGamePage() {
                   Хадгалах
                 </Button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Substitution Modal */}
+      <AnimatePresence>
+        {substitutingTeam && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={() => setSubstitutingTeam(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Тоглогч солих</h3>
+                <button
+                  onClick={() => setSubstitutingTeam(null)}
+                  className="p-1 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className={`text-sm font-medium mb-2 ${substitutingTeam === "home" ? "text-orange-600" : "text-blue-600"}`}>
+                  {substitutingTeam === "home" ? game.homeTeamName || "Эзэн баг" : game.awayTeamName || "Зочин баг"}
+                </div>
+                <div className="text-sm text-muted-foreground mb-3">
+                  Нөөц: <span className="font-medium">{getBenchPlayer(substitutingTeam)?.name}</span>
+                </div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Хэнийг солих вэ?
+                </div>
+              </div>
+
+              {/* Starters list */}
+              <div className="space-y-2 mb-4">
+                {getStarters(substitutingTeam).map((player) => (
+                  <button
+                    key={player.index}
+                    onClick={() => handleSubstitute(player.index)}
+                    disabled={isSubstituting}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border-2 transition-colors ${
+                      substitutingTeam === "home"
+                        ? "border-orange-200 hover:bg-orange-50 hover:border-orange-300"
+                        : "border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                    } ${isSubstituting ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium">{player.name}</span>
+                    </div>
+                    <RefreshCw className={`w-4 h-4 ${substitutingTeam === "home" ? "text-orange-400" : "text-blue-400"}`} />
+                  </button>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setSubstitutingTeam(null)}
+              >
+                Болих
+              </Button>
             </motion.div>
           </motion.div>
         )}

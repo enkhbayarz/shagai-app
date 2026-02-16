@@ -280,8 +280,9 @@ export const create = mutation({
     }[];
 
     if (args.homeTeamPlayers && args.homeTeamPlayers.length > 0) {
-      if (args.homeTeamPlayers.length !== playersPerTeam) {
-        throw new Error(`homeTeamPlayers must have exactly ${playersPerTeam} players`);
+      // Allow playersPerTeam OR playersPerTeam + 1 (with bench player)
+      if (args.homeTeamPlayers.length !== playersPerTeam && args.homeTeamPlayers.length !== playersPerTeam + 1) {
+        throw new Error(`homeTeamPlayers must have exactly ${playersPerTeam} or ${playersPerTeam + 1} (with bench) players`);
       }
       homeTeamPlayersWithNames = await Promise.all(
         args.homeTeamPlayers.map(async (p, index) => {
@@ -309,8 +310,9 @@ export const create = mutation({
     }[];
 
     if (args.awayTeamPlayers && args.awayTeamPlayers.length > 0) {
-      if (args.awayTeamPlayers.length !== playersPerTeam) {
-        throw new Error(`awayTeamPlayers must have exactly ${playersPerTeam} players`);
+      // Allow playersPerTeam OR playersPerTeam + 1 (with bench player)
+      if (args.awayTeamPlayers.length !== playersPerTeam && args.awayTeamPlayers.length !== playersPerTeam + 1) {
+        throw new Error(`awayTeamPlayers must have exactly ${playersPerTeam} or ${playersPerTeam + 1} (with bench) players`);
       }
       awayTeamPlayersWithNames = await Promise.all(
         args.awayTeamPlayers.map(async (p, index) => {
@@ -1485,5 +1487,102 @@ export const getLive = query({
       status: game.status,
       result: game.result,
     };
+  },
+});
+
+// Substitute a player (bench player replaces a starter)
+// Each team can only make 1 substitution per game
+export const substitutePlayer = mutation({
+  args: {
+    gameId: v.id("teamGames"),
+    team: v.union(v.literal("home"), v.literal("away")),
+    outPlayerIndex: v.number(), // index of starter to replace
+  },
+  handler: async (ctx, args) => {
+    const user = await getOptionalAuthUser(ctx);
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+    if (game.status === "finished") throw new Error("Game is already finished");
+
+    // Check if creator can modify
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
+      throw new Error("Only the game creator can make substitutions");
+    }
+
+    // Check if team has already used their substitution
+    const subUsedField = args.team === "home" ? "homeSubstitutionUsed" : "awaySubstitutionUsed";
+    if (game[subUsedField]) {
+      throw new Error("This team has already used their substitution");
+    }
+
+    // Get team data
+    const teamData = args.team === "home" ? game.homeTeam : game.awayTeam;
+    const players = [...teamData.players];
+
+    // Find the bench player (isSubstitute: true)
+    const benchPlayerIndex = players.findIndex((p) => p.isSubstitute === true);
+    if (benchPlayerIndex === -1) {
+      throw new Error("No bench player available for this team");
+    }
+
+    // Validate outPlayerIndex is a starter (not already a substitute)
+    if (args.outPlayerIndex < 0 || args.outPlayerIndex >= players.length) {
+      throw new Error("Invalid player index");
+    }
+    if (args.outPlayerIndex === benchPlayerIndex) {
+      throw new Error("Cannot substitute the bench player");
+    }
+    const outPlayer = players[args.outPlayerIndex];
+    if (outPlayer.isSubstitute) {
+      throw new Error("Cannot substitute a player who was already substituted in");
+    }
+
+    const benchPlayer = players[benchPlayerIndex];
+
+    // Store names for logging
+    const outPlayerName = outPlayer.name;
+    const inPlayerName = benchPlayer.name;
+
+    // Perform the substitution: swap bench player into the starter's slot
+    // The bench player takes over the starter's position
+    players[args.outPlayerIndex] = {
+      userId: benchPlayer.userId,
+      name: benchPlayer.name,
+      isSubstitute: true, // Mark that this slot has a substitute
+      replacedPlayerIndex: args.outPlayerIndex, // Record who was replaced
+    };
+
+    // Mark bench slot as used (or remove)
+    // We'll mark the bench player as "used" by clearing their name
+    players[benchPlayerIndex] = {
+      ...benchPlayer,
+      name: `(${outPlayerName} - солигдсон)`, // Mark as substituted out
+      isSubstitute: true,
+      replacedPlayerIndex: undefined,
+    };
+
+    // Update team data
+    const updatedTeamData = { players };
+
+    // Log the event
+    await ctx.db.insert("teamGameEvents", {
+      teamGameId: args.gameId,
+      eventType: "substitution",
+      team: args.team,
+      outPlayerIndex: args.outPlayerIndex,
+      outPlayerName,
+      inPlayerName,
+      setNumber: game.currentSet,
+      phaseIndex: game.currentPhaseIndex,
+      timestamp: Date.now(),
+    });
+
+    // Update the game
+    await ctx.db.patch(args.gameId, {
+      [args.team === "home" ? "homeTeam" : "awayTeam"]: updatedTeamData,
+      [subUsedField]: true,
+    });
+
+    return { success: true, outPlayerName, inPlayerName };
   },
 });

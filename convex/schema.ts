@@ -254,6 +254,10 @@ export default defineSchema({
     // Game status
     status: v.union(v.literal("in_progress"), v.literal("finished")),
 
+    // Substitution tracking (each team can make 1 substitution per game)
+    homeSubstitutionUsed: v.optional(v.boolean()),
+    awaySubstitutionUsed: v.optional(v.boolean()),
+
     // Final result (set when game finishes)
     result: v.optional(
       v.object({
@@ -305,4 +309,19 @@ export default defineSchema({
     bestStreak: v.number(),
     updatedAt: v.number(),
   }).index("by_clan", ["clanId"]),
+
+  // Team game events - logs substitutions and other game events for admin review
+  teamGameEvents: defineTable({
+    teamGameId: v.id("teamGames"),
+    eventType: v.literal("substitution"),
+    team: v.union(v.literal("home"), v.literal("away")),
+    // For substitution events:
+    outPlayerIndex: v.number(), // index of player who left
+    outPlayerName: v.string(),
+    inPlayerName: v.string(), // name of player who came in (from bench)
+    // When it happened
+    setNumber: v.number(),
+    phaseIndex: v.number(),
+    timestamp: v.number(),
+  }).index("by_game", ["teamGameId"]),
 });
