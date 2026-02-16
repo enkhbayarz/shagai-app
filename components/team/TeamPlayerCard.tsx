@@ -12,6 +12,7 @@ interface TeamPlayerCardProps {
   currentShotIndex?: number;
   onEditShot?: (shotIndex: number) => void;
   onEditName?: (team: "home" | "away", playerIndex: number) => void;
+  displayColor?: "orange" | "blue";
 }
 
 export function TeamPlayerCard({
@@ -23,10 +24,13 @@ export function TeamPlayerCard({
   currentShotIndex,
   onEditShot,
   onEditName,
+  displayColor,
 }: TeamPlayerCardProps) {
-  const borderColor = team === "home" ? "border-blue-500" : "border-orange-500";
+  // Use displayColor if provided, otherwise fall back to team-based color
+  const effectiveColor = displayColor ?? (team === "home" ? "blue" : "orange");
+  const borderColor = effectiveColor === "blue" ? "border-blue-500" : "border-orange-500";
   const bgColor = isCurrentShooter
-    ? team === "home"
+    ? effectiveColor === "blue"
       ? "bg-blue-50"
       : "bg-orange-50"
     : "bg-white";
@@ -51,12 +55,12 @@ export function TeamPlayerCard({
         <div className="flex justify-center mb-1 relative">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              team === "home" ? "bg-blue-100" : "bg-orange-100"
+              effectiveColor === "blue" ? "bg-blue-100" : "bg-orange-100"
             }`}
           >
             <User
               className={`w-4 h-4 ${
-                team === "home" ? "text-blue-600" : "text-orange-600"
+                effectiveColor === "blue" ? "text-blue-600" : "text-orange-600"
               }`}
             />
           </div>

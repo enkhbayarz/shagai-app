@@ -38,6 +38,23 @@ export function TeamScoreHeader({
   const [editingTeam, setEditingTeam] = useState<"home" | "away" | null>(null);
   const [editValue, setEditValue] = useState("");
 
+  // Determine which team data goes on which side based on set
+  // Colors are fixed: left = orange, right = blue
+  // Only team names/data swap between sets
+  const leftTeam = currentSet === 1 ? "away" : "home";
+  const rightTeam = currentSet === 1 ? "home" : "away";
+
+  const leftLabel = currentSet === 1 ? "Зочин" : "Эзэн";
+  const rightLabel = currentSet === 1 ? "Эзэн" : "Зочин";
+
+  const leftName = leftTeam === "home" ? homeClanName : awayClanName;
+  const leftTag = leftTeam === "home" ? homeClanTag : awayClanTag;
+  const leftScore = leftTeam === "home" ? homeScore : awayScore;
+
+  const rightName = rightTeam === "home" ? homeClanName : awayClanName;
+  const rightTag = rightTeam === "home" ? homeClanTag : awayClanTag;
+  const rightScore = rightTeam === "home" ? homeScore : awayScore;
+
   const handleStartEdit = (team: "home" | "away") => {
     if (!onEditTeamName) return;
     setEditingTeam(team);
@@ -77,144 +94,76 @@ export function TeamScoreHeader({
 
       {/* Main Score Display */}
       <div className="flex items-center justify-between">
-        {/* Left Team - Away in Set 1, Home in Set 2 */}
-        {currentSet === 1 ? (
-          <div className="flex-1 text-center">
-            <div className="text-orange-400 text-xs font-medium mb-1">Зочин</div>
-            {editingTeam === "away" ? (
-              <Input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
-                autoFocus
-              />
-            ) : (
-              <button
-                onClick={() => handleStartEdit("away")}
-                className="font-display text-xl flex items-center justify-center gap-1 hover:text-orange-300 transition-colors mx-auto"
-              >
-                {awayClanName}
-                {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
-              </button>
-            )}
-            {awayClanTag && <div className="text-xs text-gray-400">[{awayClanTag}]</div>}
-            <motion.div
-              key={awayScore}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-4xl font-bold text-orange-400 mt-2"
+        {/* Left Team - Always Orange */}
+        <div className="flex-1 text-center">
+          <div className="text-orange-400 text-xs font-medium mb-1">{leftLabel}</div>
+          {editingTeam === leftTeam ? (
+            <Input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+              className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => handleStartEdit(leftTeam)}
+              className="font-display text-xl flex items-center justify-center gap-1 hover:text-orange-300 transition-colors mx-auto"
             >
-              {awayScore}
-              <span className="text-lg text-gray-500">/15</span>
-            </motion.div>
-          </div>
-        ) : (
-          <div className="flex-1 text-center">
-            <div className="text-blue-400 text-xs font-medium mb-1">Эзэн</div>
-            {editingTeam === "home" ? (
-              <Input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
-                autoFocus
-              />
-            ) : (
-              <button
-                onClick={() => handleStartEdit("home")}
-                className="font-display text-xl flex items-center justify-center gap-1 hover:text-blue-300 transition-colors mx-auto"
-              >
-                {homeClanName}
-                {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
-              </button>
-            )}
-            {homeClanTag && <div className="text-xs text-gray-400">[{homeClanTag}]</div>}
-            <motion.div
-              key={homeScore}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-4xl font-bold text-blue-400 mt-2"
-            >
-              {homeScore}
-              <span className="text-lg text-gray-500">/15</span>
-            </motion.div>
-          </div>
-        )}
+              {leftName}
+              {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
+            </button>
+          )}
+          {leftTag && <div className="text-xs text-gray-400">[{leftTag}]</div>}
+          <motion.div
+            key={`left-${leftScore}`}
+            initial={{ scale: 1.2 }}
+            animate={{ scale: 1 }}
+            className="text-4xl font-bold text-orange-400 mt-2"
+          >
+            {leftScore}
+            <span className="text-lg text-gray-500">/15</span>
+          </motion.div>
+        </div>
 
         {/* VS Divider */}
         <div className="px-4">
           <div className="text-2xl font-bold text-gray-600">VS</div>
         </div>
 
-        {/* Right Team - Home in Set 1, Away in Set 2 */}
-        {currentSet === 1 ? (
-          <div className="flex-1 text-center">
-            <div className="text-blue-400 text-xs font-medium mb-1">Эзэн</div>
-            {editingTeam === "home" ? (
-              <Input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
-                autoFocus
-              />
-            ) : (
-              <button
-                onClick={() => handleStartEdit("home")}
-                className="font-display text-xl flex items-center justify-center gap-1 hover:text-blue-300 transition-colors mx-auto"
-              >
-                {homeClanName}
-                {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
-              </button>
-            )}
-            {homeClanTag && <div className="text-xs text-gray-400">[{homeClanTag}]</div>}
-            <motion.div
-              key={homeScore}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-4xl font-bold text-blue-400 mt-2"
+        {/* Right Team - Always Blue */}
+        <div className="flex-1 text-center">
+          <div className="text-blue-400 text-xs font-medium mb-1">{rightLabel}</div>
+          {editingTeam === rightTeam ? (
+            <Input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleSaveEdit}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+              className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => handleStartEdit(rightTeam)}
+              className="font-display text-xl flex items-center justify-center gap-1 hover:text-blue-300 transition-colors mx-auto"
             >
-              {homeScore}
-              <span className="text-lg text-gray-500">/15</span>
-            </motion.div>
-          </div>
-        ) : (
-          <div className="flex-1 text-center">
-            <div className="text-orange-400 text-xs font-medium mb-1">Зочин</div>
-            {editingTeam === "away" ? (
-              <Input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                className="h-7 text-sm font-medium text-center w-24 mx-auto bg-white/10 border-white/20 text-white"
-                autoFocus
-              />
-            ) : (
-              <button
-                onClick={() => handleStartEdit("away")}
-                className="font-display text-xl flex items-center justify-center gap-1 hover:text-orange-300 transition-colors mx-auto"
-              >
-                {awayClanName}
-                {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
-              </button>
-            )}
-            {awayClanTag && <div className="text-xs text-gray-400">[{awayClanTag}]</div>}
-            <motion.div
-              key={awayScore}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-4xl font-bold text-orange-400 mt-2"
-            >
-              {awayScore}
-              <span className="text-lg text-gray-500">/15</span>
-            </motion.div>
-          </div>
-        )}
+              {rightName}
+              {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
+            </button>
+          )}
+          {rightTag && <div className="text-xs text-gray-400">[{rightTag}]</div>}
+          <motion.div
+            key={`right-${rightScore}`}
+            initial={{ scale: 1.2 }}
+            animate={{ scale: 1 }}
+            className="text-4xl font-bold text-blue-400 mt-2"
+          >
+            {rightScore}
+            <span className="text-lg text-gray-500">/15</span>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

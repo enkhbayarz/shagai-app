@@ -97,6 +97,9 @@ export function PhaseSection({
         {displayShooters.map((shooter, displayIndex) => {
           const originalIndex = getOriginalIndex(displayIndex);
           const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
+          // Calculate display color based on position: left half = orange, right half = blue
+          const halfPoint = Math.ceil(displayShooters.length / 2);
+          const displayColor: "orange" | "blue" = displayIndex < halfPoint ? "orange" : "blue";
 
           return (
             <TeamPlayerCard
@@ -111,6 +114,7 @@ export function PhaseSection({
                 onEditShot ? (shotIndex) => onEditShot(originalIndex, shotIndex) : undefined
               }
               onEditName={onEditPlayerName}
+              displayColor={displayColor}
             />
           );
         })}

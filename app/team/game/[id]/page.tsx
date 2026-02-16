@@ -28,6 +28,7 @@ export default function TeamGamePage() {
   } | null>(null);
   const [editPlayerName, setEditPlayerName] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | undefined>(undefined);
+  const [viewingSet, setViewingSet] = useState<1 | 2>(1);
 
   // Validate route param before casting
   const rawId = params.id;
@@ -63,6 +64,13 @@ export default function TeamGamePage() {
       }
     }
   }, [game?.currentPhaseIndex]);
+
+  // Sync viewingSet with game's currentSet when it changes
+  useEffect(() => {
+    if (game?.currentSet) {
+      setViewingSet(game.currentSet as 1 | 2);
+    }
+  }, [game?.currentSet]);
 
   // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
   // ONLY applies to: niileg phase, first cycle (both Set 1 and Set 2)
@@ -125,6 +133,11 @@ export default function TeamGamePage() {
   const currentSet = game.sets[game.currentSet - 1];
   const currentPhase = currentSet?.phases[game.currentPhaseIndex];
   const currentShooter = currentPhase?.shooters[game.currentShooterIndex];
+
+  // Displayed set data (based on viewingSet, not game.currentSet)
+  const displayedSet = game.sets[viewingSet - 1];
+  // Check if Set 2 has started (Set 1 is completed)
+  const set2HasStarted = game.sets[0]?.isCompleted === true;
 
   // Get current shooter's name
   const getCurrentShooterName = () => {
@@ -263,6 +276,19 @@ export default function TeamGamePage() {
           <h1 className="font-display text-lg tracking-wider">БАГИЙН ХАРВАА</h1>
           <div className="w-10" />
         </div>
+        {/* Set Toggle Button - only show if Set 2 has started */}
+        {set2HasStarted && (
+          <div className="flex justify-center mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
+              className="text-xs"
+            >
+              {viewingSet === 1 ? "2-р өрөг" : "1-р өрөг"} руу очих
+            </Button>
+          </div>
+        )}
       </motion.header>
 
       {/* Score Header */}
@@ -272,11 +298,11 @@ export default function TeamGamePage() {
           homeClanTag={game.homeClanTag}
           awayClanName={game.awayClanName}
           awayClanTag={game.awayClanTag}
-          homeScore={currentSet?.homeScore ?? 0}
-          awayScore={currentSet?.awayScore ?? 0}
-          currentSet={game.currentSet as 1 | 2}
+          homeScore={displayedSet?.homeScore ?? 0}
+          awayScore={displayedSet?.awayScore ?? 0}
+          currentSet={viewingSet}
           set1Result={
-            game.currentSet === 2
+            viewingSet === 2
               ? {
                   homeScore: game.sets[0].homeScore,
                   awayScore: game.sets[0].awayScore,
@@ -303,9 +329,10 @@ export default function TeamGamePage() {
 
       {/* Phases List */}
       <div ref={scrollRef} className="px-4 space-y-4">
-        {[...(currentSet?.phases || [])].reverse().map((phase, reversedIndex) => {
-          const phaseIndex = (currentSet?.phases.length ?? 0) - 1 - reversedIndex;
-          const isActive = phaseIndex === game.currentPhaseIndex && !isFinished && !isGoldenPoint;
+        {[...(displayedSet?.phases || [])].reverse().map((phase, reversedIndex) => {
+          const phaseIndex = (displayedSet?.phases.length ?? 0) - 1 - reversedIndex;
+          // Only show as active if viewing the current active set
+          const isActive = viewingSet === game.currentSet && phaseIndex === game.currentPhaseIndex && !isFinished && !isGoldenPoint;
 
           return (
             <div key={phaseIndex} data-active={isActive}>
@@ -319,7 +346,7 @@ export default function TeamGamePage() {
                 onEditShot={
                   !isFinished
                     ? (shooterIndex, shotIndex) =>
-                        handleEditShot(game.currentSet - 1, phaseIndex, shooterIndex, shotIndex)
+                        handleEditShot(viewingSet - 1, phaseIndex, shooterIndex, shotIndex)
                     : undefined
                 }
                 onEditPlayerName={!isFinished ? handleOpenEditPlayerName : undefined}
