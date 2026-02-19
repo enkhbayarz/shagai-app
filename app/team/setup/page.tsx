@@ -271,30 +271,22 @@ export default function TeamSetupPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="flex gap-2 justify-center"
         >
-          <Card className="glass">
-            <CardContent className="py-4">
-              <div className="text-xs text-muted-foreground text-center mb-2">
-                Тоглогчдын тоо
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {([6, 5, 4, 3] as const).map((num) => (
-                  <Button
-                    key={num}
-                    variant={playersPerTeam === num ? "default" : "outline"}
-                    className={`h-12 text-lg font-bold touch-manipulation transition-all ${
-                      playersPerTeam === num
-                        ? "bg-black text-white ring-2 ring-amber-500"
-                        : "border-black/20 hover:bg-black/5"
-                    }`}
-                    onClick={() => handlePlayerCountChange(num)}
-                  >
-                    {num}v{num}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {([6, 5, 4, 3] as const).map((num) => (
+            <Button
+              key={num}
+              variant={playersPerTeam === num ? "default" : "outline"}
+              className={`h-9 px-4 text-sm font-bold touch-manipulation transition-all ${
+                playersPerTeam === num
+                  ? "bg-black text-white ring-2 ring-amber-500"
+                  : "border-black/20 hover:bg-black/5"
+              }`}
+              onClick={() => handlePlayerCountChange(num)}
+            >
+              {num}v{num}
+            </Button>
+          ))}
         </motion.div>
 
         {/* Teams */}

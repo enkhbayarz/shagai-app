@@ -28,15 +28,6 @@ export function TeamGameControls({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 safe-area-pb">
-      {/* Current Shooter Info */}
-      <div className="text-center mb-3">
-        <div className="text-xs text-muted-foreground">{teamLabel} баг</div>
-        <div className={`font-medium ${teamColor}`}>{currentShooterName}</div>
-        <div className="text-xs text-muted-foreground">
-          {shotNumber}/4 сум
-        </div>
-      </div>
-
       {/* Control Buttons */}
       <div className="flex gap-4 justify-center">
         {/* Miss Button */}

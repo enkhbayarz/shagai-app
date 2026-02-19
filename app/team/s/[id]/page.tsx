@@ -149,12 +149,12 @@ export default function TeamSharePage() {
           <div className="space-y-2 mb-4">
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
               <div className="text-xl font-bold text-orange-600">{result.awaySet1Score}</div>
-              <div className="text-sm text-muted-foreground self-center">1-р өрөг</div>
+              <div className="text-sm text-muted-foreground self-center">Эхэн өрөг</div>
               <div className="text-xl font-bold text-blue-600">{result.homeSet1Score}</div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
               <div className="text-xl font-bold text-orange-600">{result.awaySet2Score}</div>
-              <div className="text-sm text-muted-foreground self-center">2-р өрөг</div>
+              <div className="text-sm text-muted-foreground self-center">Дунд өрөг</div>
               <div className="text-xl font-bold text-blue-600">{result.homeSet2Score}</div>
             </div>
           </div>

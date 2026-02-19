@@ -331,7 +331,7 @@ export default function TeamGamePage() {
               onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
               className="text-xs"
             >
-              {viewingSet === 1 ? "2-р өрөг" : "1-р өрөг"} руу очих
+              {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
             </Button>
           </div>
         )}

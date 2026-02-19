@@ -44,15 +44,10 @@ export function TeamScoreHeader({
   const leftTeam = currentSet === 1 ? "away" : "home";
   const rightTeam = currentSet === 1 ? "home" : "away";
 
-  const leftLabel = currentSet === 1 ? "Зочин" : "Эзэн";
-  const rightLabel = currentSet === 1 ? "Эзэн" : "Зочин";
-
   const leftName = leftTeam === "home" ? homeClanName : awayClanName;
-  const leftTag = leftTeam === "home" ? homeClanTag : awayClanTag;
   const leftScore = leftTeam === "home" ? homeScore : awayScore;
 
   const rightName = rightTeam === "home" ? homeClanName : awayClanName;
-  const rightTag = rightTeam === "home" ? homeClanTag : awayClanTag;
   const rightScore = rightTeam === "home" ? homeScore : awayScore;
 
   const handleStartEdit = (team: "home" | "away") => {
@@ -72,7 +67,7 @@ export function TeamScoreHeader({
       {/* Set 1 Result (if in Set 2) */}
       {currentSet === 2 && set1Result && (
         <div className="flex justify-center items-center gap-4 mb-2 text-xs text-gray-400">
-          <span>1-р өрөг:</span>
+          <span>Эхэн өрөг:</span>
           <span className="text-blue-400">
             {set1Result.homePulled && set1Result.homePulled > 0
               ? <>15 <span className="text-blue-300">(+{set1Result.homePulled})</span></>
@@ -90,7 +85,7 @@ export function TeamScoreHeader({
       {/* Current Set Label */}
       <div className="text-center mb-2">
         <span className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full">
-          {currentSet}-р өрөг
+          {currentSet === 1 ? "Эхэн өрөг" : "Дунд өрөг"}
         </span>
       </div>
 
@@ -98,7 +93,6 @@ export function TeamScoreHeader({
       <div className="flex items-center justify-between">
         {/* Left Team - Always Orange */}
         <div className="flex-1 text-center">
-          <div className="text-orange-400 text-xs font-medium mb-1">{leftLabel}</div>
           {editingTeam === leftTeam ? (
             <Input
               value={editValue}
@@ -117,7 +111,6 @@ export function TeamScoreHeader({
               {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
             </button>
           )}
-          {leftTag && <div className="text-xs text-gray-400">[{leftTag}]</div>}
           <motion.div
             key={`left-${leftScore}`}
             initial={{ scale: 1.2 }}
@@ -136,7 +129,6 @@ export function TeamScoreHeader({
 
         {/* Right Team - Always Blue */}
         <div className="flex-1 text-center">
-          <div className="text-blue-400 text-xs font-medium mb-1">{rightLabel}</div>
           {editingTeam === rightTeam ? (
             <Input
               value={editValue}
@@ -155,7 +147,6 @@ export function TeamScoreHeader({
               {onEditTeamName && <Edit2 className="w-3 h-3 opacity-50" />}
             </button>
           )}
-          {rightTag && <div className="text-xs text-gray-400">[{rightTag}]</div>}
           <motion.div
             key={`right-${rightScore}`}
             initial={{ scale: 1.2 }}

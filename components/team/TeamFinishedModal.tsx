@@ -135,12 +135,12 @@ export function TeamFinishedModal({
               <div className="mt-3 space-y-1">
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
                   <div className="text-orange-600 font-bold">{result.awaySet1Score}</div>
-                  <div className="text-xs text-muted-foreground">1-р өрөг</div>
+                  <div className="text-xs text-muted-foreground">Эхэн өрөг</div>
                   <div className="text-blue-600 font-bold">{result.homeSet1Score}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
                   <div className="text-orange-600 font-bold">{result.awaySet2Score}</div>
-                  <div className="text-xs text-muted-foreground">2-р өрөг</div>
+                  <div className="text-xs text-muted-foreground">Дунд өрөг</div>
                   <div className="text-blue-600 font-bold">{result.homeSet2Score}</div>
                 </div>
               </div>
