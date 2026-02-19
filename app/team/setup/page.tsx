@@ -57,12 +57,12 @@ export default function TeamSetupPage() {
   );
   // Bench players (one per team)
   const [homeBenchPlayer, setHomeBenchPlayer] = useState<TeamPlayer>({
-    name: "Нөөц",
+    name: "Сэлгээ",
     isEditing: false,
     userId: null,
   });
   const [awayBenchPlayer, setAwayBenchPlayer] = useState<TeamPlayer>({
-    name: "Нөөц",
+    name: "Сэлгээ",
     isEditing: false,
     userId: null,
   });
@@ -345,19 +345,19 @@ export default function TeamSetupPage() {
                         .filter((team) => team._id !== selectedHomeClanId)
                         .slice(0, 5)
                         .map((team) => (
-                        <button
-                          key={team._id}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSelectAwayTeam(team)}
-                          className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
-                        >
-                          <Users className="w-3 h-3 text-orange-400" />
-                          <span className="font-medium">{team.name}</span>
-                          <span className="text-muted-foreground">
-                            [{team.tag}]
-                          </span>
-                        </button>
-                      ))}
+                          <button
+                            key={team._id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectAwayTeam(team)}
+                            className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                          >
+                            <Users className="w-3 h-3 text-orange-400" />
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-muted-foreground">
+                              [{team.tag}]
+                            </span>
+                          </button>
+                        ))}
                     </motion.div>
                   )}
               </div>
@@ -453,19 +453,43 @@ export default function TeamSetupPage() {
 
                 {/* Bench Player */}
                 <div className="mt-2 pt-2 border-t border-orange-200">
-                  <div className="text-[10px] text-orange-600 font-medium mb-1">Нөөц тоглогч</div>
+                  <div className="text-[10px] text-orange-600 font-medium mb-1">
+                    Сэлгээний тоглогч
+                  </div>
                   {awayBenchPlayer.isEditing ? (
                     <Input
                       value={awayBenchPlayer.name}
-                      onChange={(e) => setAwayBenchPlayer({ ...awayBenchPlayer, name: e.target.value, userId: null })}
-                      onBlur={() => setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: false })}
-                      onKeyDown={(e) => e.key === "Enter" && setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: false })}
+                      onChange={(e) =>
+                        setAwayBenchPlayer({
+                          ...awayBenchPlayer,
+                          name: e.target.value,
+                          userId: null,
+                        })
+                      }
+                      onBlur={() =>
+                        setAwayBenchPlayer({
+                          ...awayBenchPlayer,
+                          isEditing: false,
+                        })
+                      }
+                      onKeyDown={(e) =>
+                        e.key === "Enter" &&
+                        setAwayBenchPlayer({
+                          ...awayBenchPlayer,
+                          isEditing: false,
+                        })
+                      }
                       className="h-8 text-xs text-center"
                       autoFocus
                     />
                   ) : (
                     <button
-                      onClick={() => setAwayBenchPlayer({ ...awayBenchPlayer, isEditing: true })}
+                      onClick={() =>
+                        setAwayBenchPlayer({
+                          ...awayBenchPlayer,
+                          isEditing: true,
+                        })
+                      }
                       className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
                     >
                       <span>🪑 {awayBenchPlayer.name}</span>
@@ -526,19 +550,19 @@ export default function TeamSetupPage() {
                         .filter((team) => team._id !== selectedAwayClanId)
                         .slice(0, 5)
                         .map((team) => (
-                        <button
-                          key={team._id}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSelectHomeTeam(team)}
-                          className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
-                        >
-                          <Users className="w-3 h-3 text-blue-400" />
-                          <span className="font-medium">{team.name}</span>
-                          <span className="text-muted-foreground">
-                            [{team.tag}]
-                          </span>
-                        </button>
-                      ))}
+                          <button
+                            key={team._id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectHomeTeam(team)}
+                            className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                          >
+                            <Users className="w-3 h-3 text-blue-400" />
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-muted-foreground">
+                              [{team.tag}]
+                            </span>
+                          </button>
+                        ))}
                     </motion.div>
                   )}
               </div>
@@ -634,19 +658,43 @@ export default function TeamSetupPage() {
 
                 {/* Bench Player */}
                 <div className="mt-2 pt-2 border-t border-blue-200">
-                  <div className="text-[10px] text-blue-600 font-medium mb-1">Нөөц тоглогч</div>
+                  <div className="text-[10px] text-blue-600 font-medium mb-1">
+                    Сэлгээний тоглогч
+                  </div>
                   {homeBenchPlayer.isEditing ? (
                     <Input
                       value={homeBenchPlayer.name}
-                      onChange={(e) => setHomeBenchPlayer({ ...homeBenchPlayer, name: e.target.value, userId: null })}
-                      onBlur={() => setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: false })}
-                      onKeyDown={(e) => e.key === "Enter" && setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: false })}
+                      onChange={(e) =>
+                        setHomeBenchPlayer({
+                          ...homeBenchPlayer,
+                          name: e.target.value,
+                          userId: null,
+                        })
+                      }
+                      onBlur={() =>
+                        setHomeBenchPlayer({
+                          ...homeBenchPlayer,
+                          isEditing: false,
+                        })
+                      }
+                      onKeyDown={(e) =>
+                        e.key === "Enter" &&
+                        setHomeBenchPlayer({
+                          ...homeBenchPlayer,
+                          isEditing: false,
+                        })
+                      }
                       className="h-8 text-xs text-center"
                       autoFocus
                     />
                   ) : (
                     <button
-                      onClick={() => setHomeBenchPlayer({ ...homeBenchPlayer, isEditing: true })}
+                      onClick={() =>
+                        setHomeBenchPlayer({
+                          ...homeBenchPlayer,
+                          isEditing: true,
+                        })
+                      }
                       className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
                     >
                       <span>🪑 {homeBenchPlayer.name}</span>

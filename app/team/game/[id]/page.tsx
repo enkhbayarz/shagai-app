@@ -443,7 +443,8 @@ export default function TeamGamePage() {
                     : "bg-orange-500/30 border border-orange-300/50"
                 }`}
               >
-                {currentShooter.team === "home" ? "Эзэн" : "Зочин"} — {getCurrentShooterName()}
+                {currentShooter.team === "home" ? "Эзэн" : "Зочин"} —{" "}
+                {getCurrentShooterName()}
               </span>
             </div>
           )}
@@ -549,8 +550,8 @@ export default function TeamGamePage() {
 
               <div className="mb-4">
                 <div className="text-sm text-muted-foreground mb-2">
-                  {editingPlayer.team === "home" ? "Баг 2" : "Баг 1"} -
-                  Тоглогч {editingPlayer.playerIndex + 1}
+                  {editingPlayer.team === "home" ? "Баг 2" : "Баг 1"} - Тоглогч{" "}
+                  {editingPlayer.playerIndex + 1}
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -667,7 +668,7 @@ export default function TeamGamePage() {
                     : game.awayTeamName || "Баг 1"}
                 </div>
                 <div className="text-sm text-muted-foreground mb-3">
-                  Нөөц:{" "}
+                  Сэлгээ:{" "}
                   <span className="font-medium">
                     {getBenchPlayer(substitutingTeam)?.name}
                   </span>

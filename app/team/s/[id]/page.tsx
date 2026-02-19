@@ -18,7 +18,9 @@ export default function TeamSharePage() {
   if (game === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Ачааллаж байна...</div>
+        <div className="animate-pulse text-muted-foreground">
+          Ачааллаж байна...
+        </div>
       </div>
     );
   }
@@ -57,9 +59,12 @@ export default function TeamSharePage() {
   }
 
   const result = game.result;
-  const winnerName = result.winner === "home" ? game.homeClanName : game.awayClanName;
-  const winnerTag = result.winner === "home" ? game.homeClanTag : game.awayClanTag;
-  const winnerColor = result.winner === "home" ? "text-blue-500" : "text-orange-500";
+  const winnerName =
+    result.winner === "home" ? game.homeClanName : game.awayClanName;
+  const winnerTag =
+    result.winner === "home" ? game.homeClanTag : game.awayClanTag;
+  const winnerColor =
+    result.winner === "home" ? "text-blue-500" : "text-orange-500";
 
   return (
     <div className="min-h-screen px-4 py-6">
@@ -70,7 +75,11 @@ export default function TeamSharePage() {
         className="flex items-center justify-between mb-8"
       >
         <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-2 touch-manipulation">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 touch-manipulation"
+          >
             <ArrowLeft className="w-4 h-4" />
             БУЦАХ
           </Button>
@@ -122,7 +131,9 @@ export default function TeamSharePage() {
               </div>
               <div className="font-medium text-sm">{game.awayClanName}</div>
               {game.awayClanTag && (
-                <div className="text-xs text-muted-foreground">[{game.awayClanTag}]</div>
+                <div className="text-xs text-muted-foreground">
+                  [{game.awayClanTag}]
+                </div>
               )}
             </div>
 
@@ -140,7 +151,9 @@ export default function TeamSharePage() {
               </div>
               <div className="font-medium text-sm">{game.homeClanName}</div>
               {game.homeClanTag && (
-                <div className="text-xs text-muted-foreground">[{game.homeClanTag}]</div>
+                <div className="text-xs text-muted-foreground">
+                  [{game.homeClanTag}]
+                </div>
               )}
             </div>
           </div>
@@ -148,28 +161,52 @@ export default function TeamSharePage() {
           {/* Set Scores */}
           <div className="space-y-2 mb-4">
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">{result.awaySet1Score}</div>
-              <div className="text-sm text-muted-foreground self-center">Эхэн өрөг</div>
-              <div className="text-xl font-bold text-blue-600">{result.homeSet1Score}</div>
+              <div className="text-xl font-bold text-orange-600">
+                {result.awaySet1Score}
+              </div>
+              <div className="text-sm text-muted-foreground self-center">
+                Эхэн өрөг
+              </div>
+              <div className="text-xl font-bold text-blue-600">
+                {result.homeSet1Score}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">{result.awaySet2Score}</div>
-              <div className="text-sm text-muted-foreground self-center">Дунд өрөг</div>
-              <div className="text-xl font-bold text-blue-600">{result.homeSet2Score}</div>
+              <div className="text-xl font-bold text-orange-600">
+                {result.awaySet2Score}
+              </div>
+              <div className="text-sm text-muted-foreground self-center">
+                Дунд өрөг
+              </div>
+              <div className="text-xl font-bold text-blue-600">
+                {result.homeSet2Score}
+              </div>
             </div>
           </div>
 
           {/* Pulled Points Per Set */}
           <div className="space-y-2 pt-4 border-t">
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="text-sm font-bold text-orange-600">+{result.awaySet1Pulled ?? 0}</div>
-              <div className="text-xs text-muted-foreground self-center">Эхэн өрөг таталт</div>
-              <div className="text-sm font-bold text-blue-600">+{result.homeSet1Pulled ?? 0}</div>
+              <div className="text-sm font-bold text-orange-600">
+                +{result.awaySet1Pulled ?? 0}
+              </div>
+              <div className="text-xs text-muted-foreground self-center">
+                Эхэн өрөг таталт
+              </div>
+              <div className="text-sm font-bold text-blue-600">
+                +{result.homeSet1Pulled ?? 0}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="text-sm font-bold text-orange-600">+{result.awaySet2Pulled ?? 0}</div>
-              <div className="text-xs text-muted-foreground self-center">Дунд өрөг таталт</div>
-              <div className="text-sm font-bold text-blue-600">+{result.homeSet2Pulled ?? 0}</div>
+              <div className="text-sm font-bold text-orange-600">
+                +{result.awaySet2Pulled ?? 0}
+              </div>
+              <div className="text-xs text-muted-foreground self-center">
+                Дунд өрөг таталт
+              </div>
+              <div className="text-sm font-bold text-blue-600">
+                +{result.homeSet2Pulled ?? 0}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -188,13 +225,15 @@ export default function TeamSharePage() {
               {game.awayTeam.players
                 .filter((p) => !p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-sm">{p.name}</div>
+                  <div key={i} className="text-sm">
+                    {p.name}
+                  </div>
                 ))}
               {game.awayTeam.players
                 .filter((p) => p.isSubstitute)
                 .map((p, i) => (
                   <div key={i} className="text-xs text-muted-foreground">
-                    Нөөц: {p.name}
+                    Сэлгээ: {p.name}
                   </div>
                 ))}
             </div>
@@ -207,13 +246,15 @@ export default function TeamSharePage() {
               {game.homeTeam.players
                 .filter((p) => !p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-sm">{p.name}</div>
+                  <div key={i} className="text-sm">
+                    {p.name}
+                  </div>
                 ))}
               {game.homeTeam.players
                 .filter((p) => p.isSubstitute)
                 .map((p, i) => (
                   <div key={i} className="text-xs text-muted-foreground">
-                    Нөөц: {p.name}
+                    Сэлгээ: {p.name}
                   </div>
                 ))}
             </div>
