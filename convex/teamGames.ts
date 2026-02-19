@@ -243,8 +243,8 @@ export const create = mutation({
     const playersPerTeam = args.playersPerTeam ?? 4;
 
     // Generate default team names
-    let homeTeamName = args.homeTeamName ?? "Эзэн баг";
-    let awayTeamName = args.awayTeamName ?? "Зочин баг";
+    let homeTeamName = args.homeTeamName ?? "Баг 2";
+    let awayTeamName = args.awayTeamName ?? "Баг 1";
     let homeTeamTag: string | undefined;
     let awayTeamTag: string | undefined;
 
@@ -1233,9 +1233,9 @@ export const get = query({
     if (!game) return null;
 
     // Use stored team names, fallback to clan names for backward compatibility
-    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanName = game.homeTeamName ?? "Баг 2";
     let homeClanTag = game.homeTeamTag ?? "";
-    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanName = game.awayTeamName ?? "Баг 1";
     let awayClanTag = game.awayTeamTag ?? "";
 
     // Fallback: fetch from clans if team names not stored (old data)
@@ -1274,9 +1274,9 @@ export const getPublic = query({
     }
 
     // Use stored team names, fallback to clan names for backward compatibility
-    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanName = game.homeTeamName ?? "Баг 2";
     let homeClanTag = game.homeTeamTag ?? "";
-    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanName = game.awayTeamName ?? "Баг 1";
     let awayClanTag = game.awayTeamTag ?? "";
 
     // Fallback: fetch from clans if team names not stored (old data)
@@ -1346,9 +1346,9 @@ export const listByUser = query({
     // Use stored team names with fallback for old data
     const results = await Promise.all(
       userGames.slice(0, limit).map(async (game) => {
-        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanName = game.homeTeamName ?? "Баг 2";
         let homeClanTag = game.homeTeamTag ?? "";
-        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanName = game.awayTeamName ?? "Баг 1";
         let awayClanTag = game.awayTeamTag ?? "";
 
         if (!game.homeTeamName && game.homeClanId) {
@@ -1416,9 +1416,9 @@ export const listByClan = query({
     // Use stored team names with fallback for old data
     const results = await Promise.all(
       allGames.map(async (game) => {
-        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanName = game.homeTeamName ?? "Баг 2";
         let homeClanTag = game.homeTeamTag ?? "";
-        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanName = game.awayTeamName ?? "Баг 1";
         let awayClanTag = game.awayTeamTag ?? "";
 
         if (!game.homeTeamName && game.homeClanId) {
@@ -1470,9 +1470,9 @@ export const listLive = query({
     // Use stored team names with fallback for old data
     const results = await Promise.all(
       liveGames.map(async (game) => {
-        let homeClanName = game.homeTeamName ?? "Эзэн баг";
+        let homeClanName = game.homeTeamName ?? "Баг 2";
         let homeClanTag = game.homeTeamTag ?? "";
-        let awayClanName = game.awayTeamName ?? "Зочин баг";
+        let awayClanName = game.awayTeamName ?? "Баг 1";
         let awayClanTag = game.awayTeamTag ?? "";
 
         if (!game.homeTeamName && game.homeClanId) {
@@ -1518,9 +1518,9 @@ export const getLive = query({
     if (!game) return null;
 
     // Use stored team names, fallback to clan names for backward compatibility
-    let homeClanName = game.homeTeamName ?? "Эзэн баг";
+    let homeClanName = game.homeTeamName ?? "Баг 2";
     let homeClanTag = game.homeTeamTag ?? "";
-    let awayClanName = game.awayTeamName ?? "Зочин баг";
+    let awayClanName = game.awayTeamName ?? "Баг 1";
     let awayClanTag = game.awayTeamTag ?? "";
 
     // Fallback: fetch from clans if team names not stored (old data)

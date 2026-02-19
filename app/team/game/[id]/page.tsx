@@ -549,7 +549,7 @@ export default function TeamGamePage() {
 
               <div className="mb-4">
                 <div className="text-sm text-muted-foreground mb-2">
-                  {editingPlayer.team === "home" ? "Эзэн баг" : "Зочин баг"} -
+                  {editingPlayer.team === "home" ? "Баг 2" : "Баг 1"} -
                   Тоглогч {editingPlayer.playerIndex + 1}
                 </div>
                 <div className="relative">
@@ -663,8 +663,8 @@ export default function TeamGamePage() {
                   className={`text-sm font-medium mb-2 ${substitutingTeam === "home" ? "text-orange-600" : "text-blue-600"}`}
                 >
                   {substitutingTeam === "home"
-                    ? game.homeTeamName || "Эзэн баг"
-                    : game.awayTeamName || "Зочин баг"}
+                    ? game.homeTeamName || "Баг 2"
+                    : game.awayTeamName || "Баг 1"}
                 </div>
                 <div className="text-sm text-muted-foreground mb-3">
                   Нөөц:{" "}

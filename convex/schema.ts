@@ -151,8 +151,8 @@ export default defineSchema({
     homeClanId: v.optional(v.id("clans")),
     awayClanId: v.optional(v.id("clans")),
     // Team names (optional for backward compatibility - new games always have these)
-    homeTeamName: v.optional(v.string()), // "Эзэн баг" or actual team name
-    awayTeamName: v.optional(v.string()), // "Зочин баг" or actual team name
+    homeTeamName: v.optional(v.string()), // "Баг 2" or actual team name
+    awayTeamName: v.optional(v.string()), // "Баг 1" or actual team name
     homeTeamTag: v.optional(v.string()), // Optional tag from clan
     awayTeamTag: v.optional(v.string()), // Optional tag from clan
     playersPerTeam: v.union(v.literal(3), v.literal(4), v.literal(5), v.literal(6)),

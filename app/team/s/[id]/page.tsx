@@ -183,7 +183,7 @@ export default function TeamSharePage() {
         >
           {/* Away Players */}
           <div className="bg-orange-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-orange-700 mb-2">Зочин баг</h3>
+            <h3 className="text-sm font-medium text-orange-700 mb-2">Баг 1</h3>
             <div className="space-y-1">
               {game.awayTeam.players
                 .filter((p) => !p.isSubstitute)
@@ -202,7 +202,7 @@ export default function TeamSharePage() {
 
           {/* Home Players */}
           <div className="bg-blue-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-blue-700 mb-2">Эзэн баг</h3>
+            <h3 className="text-sm font-medium text-blue-700 mb-2">Баг 2</h3>
             <div className="space-y-1">
               {game.homeTeam.players
                 .filter((p) => !p.isSubstitute)

@@ -22,8 +22,8 @@ export default function TeamSetupPage() {
 
   // Game settings
   const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6>(6);
-  const [homeTeamName, setHomeTeamName] = useState("Эзэн баг");
-  const [awayTeamName, setAwayTeamName] = useState("Зочин баг");
+  const [homeTeamName, setHomeTeamName] = useState("Баг 2");
+  const [awayTeamName, setAwayTeamName] = useState("Баг 1");
   const [isEditingHomeName, setIsEditingHomeName] = useState(false);
   const [isEditingAwayName, setIsEditingAwayName] = useState(false);
 
@@ -303,7 +303,7 @@ export default function TeamSetupPage() {
               <div className="relative mb-3">
                 <div className="flex items-center justify-center gap-1">
                   <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
-                    З
+                    1
                   </div>
                   {isEditingAwayName ? (
                     <Input
@@ -484,7 +484,7 @@ export default function TeamSetupPage() {
               <div className="relative mb-3">
                 <div className="flex items-center justify-center gap-1">
                   <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-                    Э
+                    2
                   </div>
                   {isEditingHomeName ? (
                     <Input
