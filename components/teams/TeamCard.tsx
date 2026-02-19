@@ -43,7 +43,7 @@ export function TeamCard({ team, index }: TeamCardProps) {
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
-                  {team.memberCount}/50
+                  {team.memberCount}
                 </span>
               </div>
             </div>

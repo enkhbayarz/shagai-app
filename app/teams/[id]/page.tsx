@@ -336,9 +336,6 @@ export default function TeamDetailPage() {
               <div className="text-xs text-muted-foreground">Харваачид</div>
               <div className="font-score text-2xl font-bold tabular-nums">
                 {teamStats?.memberCount ?? 0}
-                <span className="text-sm text-muted-foreground font-normal">
-                  /50
-                </span>
               </div>
             </CardContent>
           </Card>

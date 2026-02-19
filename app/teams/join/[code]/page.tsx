@@ -111,7 +111,7 @@ export default function JoinTeamPage() {
             <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
               <span>
-                {team.memberCount}/50 харваач
+                {team.memberCount} харваач
               </span>
             </div>
 
@@ -126,8 +126,6 @@ export default function JoinTeamPage() {
                   </Button>
                 </Link>
               </div>
-            ) : team.memberCount >= 50 ? (
-              <p className="text-sm text-red-500">Баг дүүрсэн байна</p>
             ) : !clerkUser ? (
               <SignInButton mode="modal">
                 <Button className="w-full h-12 bg-black text-white hover:bg-black/90 touch-manipulation">

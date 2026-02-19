@@ -125,15 +125,6 @@ export const invite = mutation({
       throw new Error("Invite already pending");
     }
 
-    // Check member limit
-    const members = await ctx.db
-      .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
-      .collect();
-    if (members.length >= 50) {
-      throw new Error("Team is full (50 members max)");
-    }
-
     return await ctx.db.insert("clanInvites", {
       clanId: args.teamId,
       inviterId: user._id,
@@ -155,15 +146,6 @@ export const acceptInvite = mutation({
     const invite = await ctx.db.get(args.inviteId);
     if (!invite || invite.inviteeId !== user._id || invite.status !== "pending") {
       throw new Error("Invalid invite");
-    }
-
-    // Check member limit
-    const members = await ctx.db
-      .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", invite.clanId))
-      .collect();
-    if (members.length >= 50) {
-      throw new Error("Team is full");
     }
 
     // Check not already a member
@@ -393,15 +375,6 @@ export const joinByCode = mutation({
       .first();
     if (existing) {
       throw new Error("Already a member");
-    }
-
-    // Check member limit
-    const members = await ctx.db
-      .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", team._id))
-      .collect();
-    if (members.length >= 50) {
-      throw new Error("Team is full (50 members max)");
     }
 
     await ctx.db.insert("clanMembers", {
@@ -792,16 +765,6 @@ export const addTestPlayers = mutation({
     const team = await ctx.db.get(args.teamId);
     if (!team) {
       throw new Error("Team not found");
-    }
-
-    // Check current member count to avoid exceeding limit
-    const currentMembers = await ctx.db
-      .query("clanMembers")
-      .withIndex("by_clan", (q) => q.eq("clanId", args.teamId))
-      .collect();
-
-    if (currentMembers.length + args.count > 50) {
-      throw new Error(`Cannot add ${args.count} players. Team would exceed 50 member limit.`);
     }
 
     const testNames = [
