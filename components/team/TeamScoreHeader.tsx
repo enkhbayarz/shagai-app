@@ -73,15 +73,17 @@ export function TeamScoreHeader({
       {currentSet === 2 && set1Result && (
         <div className="flex justify-center items-center gap-4 mb-2 text-xs text-gray-400">
           <span>1-р өрөг:</span>
-          <span className="text-blue-400">{set1Result.homeScore}</span>
+          <span className="text-blue-400">
+            {set1Result.homePulled && set1Result.homePulled > 0
+              ? <>15 <span className="text-blue-300">(+{set1Result.homePulled})</span></>
+              : set1Result.homeScore}
+          </span>
           <span>-</span>
-          <span className="text-orange-400">{set1Result.awayScore}</span>
-          {(set1Result.homePulled !== undefined && set1Result.homePulled > 0) && (
-            <span className="text-blue-300">(+{set1Result.homePulled})</span>
-          )}
-          {(set1Result.awayPulled !== undefined && set1Result.awayPulled > 0) && (
-            <span className="text-orange-300">(+{set1Result.awayPulled})</span>
-          )}
+          <span className="text-orange-400">
+            {set1Result.awayPulled && set1Result.awayPulled > 0
+              ? <>15 <span className="text-orange-300">(+{set1Result.awayPulled})</span></>
+              : set1Result.awayScore}
+          </span>
         </div>
       )}
 
