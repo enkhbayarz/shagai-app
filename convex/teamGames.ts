@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUser, getOptionalAuthUser } from "./auth";
 import { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // ============================================
 // TYPES
@@ -522,6 +523,10 @@ export const recordShot = mutation({
               wasGoldenPoint: false,
             },
           });
+          // Update team stats
+          await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+            teamGameId: args.gameId,
+          });
           return { gameEnded: true, winner };
         }
       }
@@ -564,6 +569,10 @@ export const recordShot = mutation({
             awayTotalPulled: (set1.awayPulled ?? 0) + (currentSet.awayPulled ?? 0),
             wasGoldenPoint: false,
           },
+        });
+        // Update team stats
+        await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+          teamGameId: args.gameId,
         });
         return { gameEnded: true, winner };
       }
@@ -667,6 +676,10 @@ export const recordShot = mutation({
               awayTotalPulled,
               wasGoldenPoint: false,
             },
+          });
+          // Update team stats
+          await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+            teamGameId: args.gameId,
           });
           return { gameEnded: true, winner };
         }
@@ -814,6 +827,10 @@ export const recordShot = mutation({
               wasGoldenPoint: false,
             },
           });
+          // Update team stats
+          await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+            teamGameId: args.gameId,
+          });
           return { gameEnded: true };
         }
       }
@@ -887,6 +904,10 @@ async function handleGoldenPointShot(
         awayTotalPulled: (set1.awayPulled ?? 0) + (set2.awayPulled ?? 0),
         wasGoldenPoint: true,
       },
+    });
+    // Update team stats
+    await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+      teamGameId: game._id,
     });
     return { gameEnded: true, goldenPointWinner: winner };
   };

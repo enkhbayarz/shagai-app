@@ -6,7 +6,7 @@ import { TeamPlayerCard } from "./TeamPlayerCard";
 interface Shooter {
   team: "home" | "away";
   playerIndex: number;
-  shots: (boolean | null)[];
+  shots: (boolean | "skip" | null)[];
 }
 
 interface Phase {

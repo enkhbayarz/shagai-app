@@ -55,28 +55,53 @@ export const getLiveStats = query({
     weekStart.setUTCHours(0, 0, 0, 0);
     const weekStartMs = weekStart.getTime();
 
-    // Count active games
+    // Count active series games
     const activeGames = await ctx.db
       .query("games")
       .withIndex("by_finished", (q) => q.eq("isFinished", false))
       .collect();
 
-    // Get recent games for today/week stats (bounded for performance)
+    // Count active team games
+    const activeTeamGames = await ctx.db
+      .query("teamGames")
+      .withIndex("by_status", (q) => q.eq("status", "in_progress"))
+      .collect();
+
+    // Get recent series games for today/week stats (bounded for performance)
     const recentGames = await ctx.db.query("games").order("desc").take(2000);
 
-    let todaysMatches = 0;
-    let weeksMatches = 0;
+    // Get recent team games for today/week stats
+    const recentTeamGames = await ctx.db.query("teamGames").order("desc").take(500);
+
+    let todaysSeriesMatches = 0;
+    let weeksSeriesMatches = 0;
     let totalDuration = 0;
     let finishedCount = 0;
 
     for (const game of recentGames) {
       if (game.startedAt >= todayStartMs) {
-        todaysMatches++;
+        todaysSeriesMatches++;
       }
       if (game.startedAt >= weekStartMs) {
-        weeksMatches++;
+        weeksSeriesMatches++;
       }
       if (game.isFinished && game.finishedAt) {
+        totalDuration += game.finishedAt - game.startedAt;
+        finishedCount++;
+      }
+    }
+
+    let todaysTeamMatches = 0;
+    let weeksTeamMatches = 0;
+
+    for (const game of recentTeamGames) {
+      if (game.startedAt >= todayStartMs) {
+        todaysTeamMatches++;
+      }
+      if (game.startedAt >= weekStartMs) {
+        weeksTeamMatches++;
+      }
+      if (game.status === "finished" && game.finishedAt) {
         totalDuration += game.finishedAt - game.startedAt;
         finishedCount++;
       }
@@ -88,10 +113,18 @@ export const getLiveStats = query({
         : null;
 
     return {
-      todaysMatches,
-      weeksMatches,
-      activeGames: activeGames.length,
+      // Combined totals
+      todaysMatches: todaysSeriesMatches + todaysTeamMatches,
+      weeksMatches: weeksSeriesMatches + weeksTeamMatches,
+      activeGames: activeGames.length + activeTeamGames.length,
       avgDurationMinutes,
+      // Separate counts for detailed display
+      todaysSeriesMatches,
+      todaysTeamMatches,
+      weeksSeriesMatches,
+      weeksTeamMatches,
+      activeSeriesGames: activeGames.length,
+      activeTeamGames: activeTeamGames.length,
     };
   },
 });
