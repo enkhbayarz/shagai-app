@@ -226,6 +226,7 @@ export default defineSchema({
         winner: v.optional(v.union(v.literal("home"), v.literal("away"))),
         homePulled: v.optional(v.number()), // "татлаа" points
         awayPulled: v.optional(v.number()),
+        firstTo15: v.optional(v.union(v.literal("home"), v.literal("away"))),
       })
     ),
 

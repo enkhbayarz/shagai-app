@@ -435,6 +435,15 @@ export const recordShot = mutation({
       }
     }
 
+    // Track which team reached 15 first in Set 1 (for 15-15 tiebreak rule)
+    if (game.currentSet === 1 && !currentSet.firstTo15) {
+      if (currentSet.homeScore >= 15) {
+        currentSet.firstTo15 = "home";
+      } else if (currentSet.awayScore >= 15) {
+        currentSet.firstTo15 = "away";
+      }
+    }
+
     // IMMEDIATE SET 1 END: Combined score reaches 30 → end set immediately
     if (game.currentSet === 1 &&
         currentSet.homeScore + currentSet.awayScore >= 30) {
@@ -493,41 +502,48 @@ export const recordShot = mutation({
       const homeTotal = set1.homeScore + currentSet.homeScore;
       const awayTotal = set1.awayScore + currentSet.awayScore;
 
-      // SPECIAL RULE: If Set 1 was 15-15, first to reach 15 in Set 2 wins
-      if (set1.homeScore === 15 && set1.awayScore === 15) {
-        // First team to reach 15 in Set 2 wins immediately
+      // SPECIAL RULE: If Set 1 was 15-15, the team that reached 15 first in Set 1
+      // must reach 15 first again in Set 2 to win. If the other team reaches 15 first,
+      // the game continues and will go to Golden Point.
+      if (set1.homeScore === 15 && set1.awayScore === 15 && set1.firstTo15) {
         if (currentSet.homeScore === 15 || currentSet.awayScore === 15) {
-          // Update phase with current shot
-          shooters[game.currentShooterIndex] = currentShooter;
-          currentPhase.shooters = shooters;
-          phases[game.currentPhaseIndex] = currentPhase;
-          currentSet.phases = phases;
+          const teamReaching15InSet2: "home" | "away" = currentSet.homeScore === 15 ? "home" : "away";
 
-          const winner = currentSet.homeScore === 15 ? "home" : "away";
-          currentSet.homePulled = 0;
-          currentSet.awayPulled = 0;
-          sets[currentSetIndex] = currentSet;
+          if (teamReaching15InSet2 === set1.firstTo15) {
+            // Same team reached 15 first in both sets → wins immediately
+            shooters[game.currentShooterIndex] = currentShooter;
+            currentPhase.shooters = shooters;
+            phases[game.currentPhaseIndex] = currentPhase;
+            currentSet.phases = phases;
 
-          await ctx.db.patch(args.gameId, {
-            sets,
-            status: "finished",
-            finishedAt: Date.now(),
-            result: {
-              winner,
-              homeSet1Score: 15,
-              awaySet1Score: 15,
-              homeSet2Score: currentSet.homeScore,
-              awaySet2Score: currentSet.awayScore,
-              homeTotalPulled: 0,
-              awayTotalPulled: 0,
-              wasGoldenPoint: false,
-            },
-          });
-          // Update team stats
-          await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
-            teamGameId: args.gameId,
-          });
-          return { gameEnded: true, winner };
+            const winner = set1.firstTo15;
+            currentSet.homePulled = 0;
+            currentSet.awayPulled = 0;
+            sets[currentSetIndex] = currentSet;
+
+            await ctx.db.patch(args.gameId, {
+              sets,
+              status: "finished",
+              finishedAt: Date.now(),
+              result: {
+                winner,
+                homeSet1Score: 15,
+                awaySet1Score: 15,
+                homeSet2Score: currentSet.homeScore,
+                awaySet2Score: currentSet.awayScore,
+                homeTotalPulled: 0,
+                awayTotalPulled: 0,
+                wasGoldenPoint: false,
+              },
+            });
+            // Update team stats
+            await ctx.scheduler.runAfter(0, internal.teamStats.updateTeamStatsOnGameFinish, {
+              teamGameId: args.gameId,
+            });
+            return { gameEnded: true, winner };
+          }
+          // Different team reached 15 first in Set 2 → game continues
+          // Set 2 will play out to combined 30, then Golden Point triggers
         }
       }
 
@@ -1083,6 +1099,31 @@ export const editShot = mutation({
     targetPhase.shooters = shooters;
     phases[args.phaseIndex] = targetPhase;
     targetSet.phases = phases;
+
+    // Recalculate firstTo15 for Set 1 if a Set 1 shot was edited
+    if (args.setIndex === 0) {
+      let homeRunning = 0;
+      let awayRunning = 0;
+      let newFirstTo15: "home" | "away" | undefined = undefined;
+
+      for (const phase of targetSet.phases) {
+        for (let shotRound = 0; shotRound < 4; shotRound++) {
+          for (const shooter of phase.shooters) {
+            if (shooter.shots[shotRound] === true) {
+              if (shooter.team === "home") homeRunning++;
+              else awayRunning++;
+              if (!newFirstTo15) {
+                if (homeRunning >= 15) newFirstTo15 = "home";
+                else if (awayRunning >= 15) newFirstTo15 = "away";
+              }
+            }
+          }
+        }
+      }
+
+      targetSet.firstTo15 = newFirstTo15;
+    }
+
     sets[args.setIndex] = targetSet;
 
     await ctx.db.patch(args.gameId, { sets });
