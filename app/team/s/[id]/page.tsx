@@ -99,7 +99,7 @@ export default function TeamSharePage() {
           </p>
           {result.wasGoldenPoint && (
             <span className="inline-block mt-2 bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
-              Алтан оноогоор
+              Дүүжингээр
             </span>
           )}
         </motion.div>

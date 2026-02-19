@@ -133,7 +133,7 @@ export default function TeamSpectatorPage() {
           >
             <div className="flex items-center justify-center gap-2">
               <Trophy className="w-5 h-5" />
-              <span className="font-bold">АЛТАН ОНОО</span>
+              <span className="font-bold">ДҮҮЖИН</span>
             </div>
           </motion.div>
         )}

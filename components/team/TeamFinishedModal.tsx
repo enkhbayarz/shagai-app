@@ -110,7 +110,7 @@ export function TeamFinishedModal({
             {result.wasGoldenPoint && (
               <div className="text-center mb-4">
                 <span className="bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
-                  Алтан оноогоор
+                  Дүүжингээр
                 </span>
               </div>
             )}
