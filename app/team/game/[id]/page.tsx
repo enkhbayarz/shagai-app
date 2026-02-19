@@ -27,7 +27,9 @@ export default function TeamGamePage() {
     currentName: string;
   } | null>(null);
   const [editPlayerName, setEditPlayerName] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | undefined>(undefined);
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | undefined>(
+    undefined,
+  );
   const [viewingSet, setViewingSet] = useState<1 | 2>(1);
 
   // Validate route param before casting
@@ -51,19 +53,25 @@ export default function TeamGamePage() {
   const substitutePlayer = useMutation(api.teamGames.substitutePlayer);
 
   // Substitution state
-  const [substitutingTeam, setSubstitutingTeam] = useState<"home" | "away" | null>(null);
+  const [substitutingTeam, setSubstitutingTeam] = useState<
+    "home" | "away" | null
+  >(null);
   const [isSubstituting, setIsSubstituting] = useState(false);
 
   // Search users for player name editing
   const searchResults = useQuery(
     api.users.search,
-    editPlayerName.length >= 2 && editingPlayer ? { query: editPlayerName } : "skip"
+    editPlayerName.length >= 2 && editingPlayer
+      ? { query: editPlayerName }
+      : "skip",
   );
 
   // Auto-scroll to active phase
   useEffect(() => {
     if (scrollRef.current && game) {
-      const activePhase = scrollRef.current.querySelector("[data-active='true']");
+      const activePhase = scrollRef.current.querySelector(
+        "[data-active='true']",
+      );
       if (activePhase) {
         activePhase.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -111,13 +119,22 @@ export default function TeamGamePage() {
       // Auto-skip: trigger skip without user interaction
       recordShot({ gameId, isSkip: true }).catch(console.error);
     }
-  }, [game?.currentShooterIndex, game?.currentPhaseIndex, game?.currentShotInTurn, game?.currentSet, gameId, isRecording]);
+  }, [
+    game?.currentShooterIndex,
+    game?.currentPhaseIndex,
+    game?.currentShotInTurn,
+    game?.currentSet,
+    gameId,
+    isRecording,
+  ]);
 
   // Distinguish loading from not found
   if (game === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Ачааллаж байна...</div>
+        <div className="animate-pulse text-muted-foreground">
+          Ачааллаж байна...
+        </div>
       </div>
     );
   }
@@ -148,7 +165,9 @@ export default function TeamGamePage() {
   const getCurrentShooterName = () => {
     if (!currentShooter) return "";
     if (currentShooter.team === "home") {
-      return game.homeTeam.players[currentShooter.playerIndex]?.name ?? "Тоглогч";
+      return (
+        game.homeTeam.players[currentShooter.playerIndex]?.name ?? "Тоглогч"
+      );
     }
     return game.awayTeam.players[currentShooter.playerIndex]?.name ?? "Тоглогч";
   };
@@ -202,7 +221,7 @@ export default function TeamGamePage() {
     setIndex: number,
     phaseIndex: number,
     shooterIndex: number,
-    shotIndex: number
+    shotIndex: number,
   ) => {
     try {
       await editShot({ gameId, setIndex, phaseIndex, shooterIndex, shotIndex });
@@ -221,9 +240,14 @@ export default function TeamGamePage() {
   };
 
   // Handle player name editing - open modal
-  const handleOpenEditPlayerName = (team: "home" | "away", playerIndex: number) => {
-    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
-    const currentName = players[playerIndex]?.name ?? `Тоглогч ${playerIndex + 1}`;
+  const handleOpenEditPlayerName = (
+    team: "home" | "away",
+    playerIndex: number,
+  ) => {
+    const players =
+      team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    const currentName =
+      players[playerIndex]?.name ?? `Тоглогч ${playerIndex + 1}`;
     setEditingPlayer({ team, playerIndex, currentName });
     setEditPlayerName(currentName);
     setSelectedUserId(undefined);
@@ -281,14 +305,16 @@ export default function TeamGamePage() {
 
   // Get bench player for a team
   const getBenchPlayer = (team: "home" | "away") => {
-    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
-    return players.find(p => p.isSubstitute === true);
+    const players =
+      team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    return players.find((p) => p.isSubstitute === true);
   };
 
   // Check if team can substitute
   const canSubstitute = (team: "home" | "away") => {
     if (isFinished) return false;
-    const subUsed = team === "home" ? game.homeSubstitutionUsed : game.awaySubstitutionUsed;
+    const subUsed =
+      team === "home" ? game.homeSubstitutionUsed : game.awaySubstitutionUsed;
     if (subUsed) return false;
     const benchPlayer = getBenchPlayer(team);
     return benchPlayer !== undefined;
@@ -296,10 +322,11 @@ export default function TeamGamePage() {
 
   // Get starters (non-bench players) for substitution modal
   const getStarters = (team: "home" | "away") => {
-    const players = team === "home" ? game.homeTeam.players : game.awayTeam.players;
+    const players =
+      team === "home" ? game.homeTeam.players : game.awayTeam.players;
     return players
       .map((p, index) => ({ ...p, index }))
-      .filter(p => !p.isSubstitute);
+      .filter((p) => !p.isSubstitute);
   };
 
   const isFinished = game.status === "finished";
@@ -315,7 +342,11 @@ export default function TeamGamePage() {
       >
         <div className="flex items-center justify-between">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2 touch-manipulation">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 touch-manipulation"
+            >
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
@@ -403,37 +434,51 @@ export default function TeamGamePage() {
           className="mx-4 mb-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl p-4 text-center"
         >
           <div className="text-lg font-bold">АЛТАН ОНОО</div>
-          <div className="text-sm opacity-90">Эхнийх оногдуулж, дараагийнх алдвал ялна!</div>
+          {/* <div className="text-sm opacity-90">Эхнийх оногдуулж, дараагийнх алдвал ялна!</div> */}
         </motion.div>
       )}
 
       {/* Phases List */}
       <div ref={scrollRef} className="px-4 space-y-4">
-        {[...(displayedSet?.phases || [])].reverse().map((phase, reversedIndex) => {
-          const phaseIndex = (displayedSet?.phases.length ?? 0) - 1 - reversedIndex;
-          // Only show as active if viewing the current active set
-          const isActive = viewingSet === game.currentSet && phaseIndex === game.currentPhaseIndex && !isFinished && !isGoldenPoint;
+        {[...(displayedSet?.phases || [])]
+          .reverse()
+          .map((phase, reversedIndex) => {
+            const phaseIndex =
+              (displayedSet?.phases.length ?? 0) - 1 - reversedIndex;
+            // Only show as active if viewing the current active set
+            const isActive =
+              viewingSet === game.currentSet &&
+              phaseIndex === game.currentPhaseIndex &&
+              !isFinished &&
+              !isGoldenPoint;
 
-          return (
-            <div key={phaseIndex} data-active={isActive}>
-              <PhaseSection
-                phase={phase as any}
-                isActive={isActive}
-                currentShooterIndex={isActive ? game.currentShooterIndex : -1}
-                currentShotIndex={isActive ? game.currentShotInTurn : -1}
-                homeTeamPlayers={game.homeTeam.players}
-                awayTeamPlayers={game.awayTeam.players}
-                onEditShot={
-                  !isFinished
-                    ? (shooterIndex, shotIndex) =>
-                        handleEditShot(viewingSet - 1, phaseIndex, shooterIndex, shotIndex)
-                    : undefined
-                }
-                onEditPlayerName={!isFinished ? handleOpenEditPlayerName : undefined}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div key={phaseIndex} data-active={isActive}>
+                <PhaseSection
+                  phase={phase as any}
+                  isActive={isActive}
+                  currentShooterIndex={isActive ? game.currentShooterIndex : -1}
+                  currentShotIndex={isActive ? game.currentShotInTurn : -1}
+                  homeTeamPlayers={game.homeTeam.players}
+                  awayTeamPlayers={game.awayTeam.players}
+                  onEditShot={
+                    !isFinished
+                      ? (shooterIndex, shotIndex) =>
+                          handleEditShot(
+                            viewingSet - 1,
+                            phaseIndex,
+                            shooterIndex,
+                            shotIndex,
+                          )
+                      : undefined
+                  }
+                  onEditPlayerName={
+                    !isFinished ? handleOpenEditPlayerName : undefined
+                  }
+                />
+              </div>
+            );
+          })}
       </div>
 
       {/* Game Controls */}
@@ -492,7 +537,8 @@ export default function TeamGamePage() {
 
               <div className="mb-4">
                 <div className="text-sm text-muted-foreground mb-2">
-                  {editingPlayer.team === "home" ? "Эзэн баг" : "Зочин баг"} - Тоглогч {editingPlayer.playerIndex + 1}
+                  {editingPlayer.team === "home" ? "Эзэн баг" : "Зочин баг"} -
+                  Тоглогч {editingPlayer.playerIndex + 1}
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -502,7 +548,9 @@ export default function TeamGamePage() {
                       setEditPlayerName(e.target.value);
                       setSelectedUserId(undefined); // Clear selection when typing
                     }}
-                    onKeyDown={(e) => e.key === "Enter" && handleSavePlayerName()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleSavePlayerName()
+                    }
                     placeholder="Нэр хайх эсвэл бичих..."
                     className="pl-10"
                     autoFocus
@@ -522,19 +570,26 @@ export default function TeamGamePage() {
                     >
                       <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{user.fullName}</div>
-                        <div className="text-xs text-muted-foreground truncate">@{user.username}</div>
+                        <div className="text-sm font-medium truncate">
+                          {user.fullName}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          @{user.username}
+                        </div>
                       </div>
                     </button>
                   ))}
                 </div>
               )}
 
-              {editPlayerName.length >= 2 && searchResults && searchResults.length === 0 && !selectedUserId && (
-                <p className="text-sm text-muted-foreground text-center mb-4">
-                  Хэрэглэгч олдсонгүй. Шууд нэр оруулна уу.
-                </p>
-              )}
+              {editPlayerName.length >= 2 &&
+                searchResults &&
+                searchResults.length === 0 &&
+                !selectedUserId && (
+                  <p className="text-sm text-muted-foreground text-center mb-4">
+                    Хэрэглэгч олдсонгүй. Шууд нэр оруулна уу.
+                  </p>
+                )}
 
               {selectedUserId && (
                 <div className="flex items-center gap-2 text-sm text-emerald-600 mb-4">
@@ -592,11 +647,18 @@ export default function TeamGamePage() {
               </div>
 
               <div className="mb-4">
-                <div className={`text-sm font-medium mb-2 ${substitutingTeam === "home" ? "text-orange-600" : "text-blue-600"}`}>
-                  {substitutingTeam === "home" ? game.homeTeamName || "Эзэн баг" : game.awayTeamName || "Зочин баг"}
+                <div
+                  className={`text-sm font-medium mb-2 ${substitutingTeam === "home" ? "text-orange-600" : "text-blue-600"}`}
+                >
+                  {substitutingTeam === "home"
+                    ? game.homeTeamName || "Эзэн баг"
+                    : game.awayTeamName || "Зочин баг"}
                 </div>
                 <div className="text-sm text-muted-foreground mb-3">
-                  Нөөц: <span className="font-medium">{getBenchPlayer(substitutingTeam)?.name}</span>
+                  Нөөц:{" "}
+                  <span className="font-medium">
+                    {getBenchPlayer(substitutingTeam)?.name}
+                  </span>
                 </div>
                 <div className="text-sm text-muted-foreground mb-2">
                   Хэнийг солих вэ?
@@ -620,7 +682,9 @@ export default function TeamGamePage() {
                       <User className="w-4 h-4 text-gray-400" />
                       <span className="font-medium">{player.name}</span>
                     </div>
-                    <RefreshCw className={`w-4 h-4 ${substitutingTeam === "home" ? "text-orange-400" : "text-blue-400"}`} />
+                    <RefreshCw
+                      className={`w-4 h-4 ${substitutingTeam === "home" ? "text-orange-400" : "text-blue-400"}`}
+                    />
                   </button>
                 ))}
               </div>

@@ -269,6 +269,10 @@ export default defineSchema({
         awaySet2Score: v.number(),
         homeTotalPulled: v.number(),
         awayTotalPulled: v.number(),
+        homeSet1Pulled: v.optional(v.number()),
+        awaySet1Pulled: v.optional(v.number()),
+        homeSet2Pulled: v.optional(v.number()),
+        awaySet2Pulled: v.optional(v.number()),
         wasGoldenPoint: v.boolean(),
       })
     ),

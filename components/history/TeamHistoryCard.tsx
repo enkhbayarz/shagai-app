@@ -136,7 +136,7 @@ export function TeamHistoryCard({ game, index }: TeamHistoryCardProps) {
             <div className="flex items-center gap-2 mb-3 text-amber-600">
               <Trophy className="w-4 h-4" />
               <span className="font-medium text-sm">
-                {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} ялав
+                {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо
                 {game.result.wasGoldenPoint && " (Алтан оноо)"}
               </span>
             </div>

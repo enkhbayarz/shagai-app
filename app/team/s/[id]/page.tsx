@@ -95,7 +95,7 @@ export default function TeamSharePage() {
           </div>
           <h2 className="text-2xl font-bold">Тоглолт дууслаа!</h2>
           <p className={`text-lg font-medium ${winnerColor} mt-1`}>
-            [{winnerTag}] {winnerName} ялав!
+            [{winnerTag}] {winnerName} хожлоо!
           </p>
           {result.wasGoldenPoint && (
             <span className="inline-block mt-2 bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
@@ -159,16 +159,17 @@ export default function TeamSharePage() {
             </div>
           </div>
 
-          {/* Pulled Points */}
-          <div className="grid grid-cols-3 gap-4 text-center pt-4 border-t">
-            <div>
-              <div className="text-xs text-muted-foreground">Татлаа</div>
-              <div className="text-lg font-bold text-orange-600">+{result.awayTotalPulled}</div>
+          {/* Pulled Points Per Set */}
+          <div className="space-y-2 pt-4 border-t">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="text-sm font-bold text-orange-600">+{result.awaySet1Pulled ?? 0}</div>
+              <div className="text-xs text-muted-foreground self-center">Эхэн өрөг таталт</div>
+              <div className="text-sm font-bold text-blue-600">+{result.homeSet1Pulled ?? 0}</div>
             </div>
-            <div />
-            <div>
-              <div className="text-xs text-muted-foreground">Татлаа</div>
-              <div className="text-lg font-bold text-blue-600">+{result.homeTotalPulled}</div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="text-sm font-bold text-orange-600">+{result.awaySet2Pulled ?? 0}</div>
+              <div className="text-xs text-muted-foreground self-center">Дунд өрөг таталт</div>
+              <div className="text-sm font-bold text-blue-600">+{result.homeSet2Pulled ?? 0}</div>
             </div>
           </div>
         </motion.div>

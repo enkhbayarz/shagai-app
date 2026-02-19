@@ -20,6 +20,10 @@ interface TeamFinishedModalProps {
     awaySet2Score: number;
     homeTotalPulled: number;
     awayTotalPulled: number;
+    homeSet1Pulled?: number;
+    awaySet1Pulled?: number;
+    homeSet2Pulled?: number;
+    awaySet2Pulled?: number;
     wasGoldenPoint: boolean;
   };
   gameId: string;
@@ -99,7 +103,7 @@ export function TeamFinishedModal({
             {/* Winner Announcement */}
             <h2 className="text-2xl font-bold text-center mb-1">Тоглолт дууслаа!</h2>
             <p className={`text-center text-lg font-medium ${winnerColor} mb-4`}>
-              {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} ялав!
+              {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо!
             </p>
 
             {/* Golden Point Badge */}
@@ -145,16 +149,17 @@ export function TeamFinishedModal({
                 </div>
               </div>
 
-              {/* Pulled Points */}
-              <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <div className="text-xs text-muted-foreground">Татлаа</div>
-                  <div className="font-bold text-orange-600">+{result.awayTotalPulled}</div>
+              {/* Pulled Points Per Set */}
+              <div className="mt-3 pt-3 border-t space-y-1">
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="font-bold text-orange-600">+{result.awaySet1Pulled ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Эхэн өрөг таталт</div>
+                  <div className="font-bold text-blue-600">+{result.homeSet1Pulled ?? 0}</div>
                 </div>
-                <div />
-                <div>
-                  <div className="text-xs text-muted-foreground">Татлаа</div>
-                  <div className="font-bold text-blue-600">+{result.homeTotalPulled}</div>
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="font-bold text-orange-600">+{result.awaySet2Pulled ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Дунд өрөг таталт</div>
+                  <div className="font-bold text-blue-600">+{result.homeSet2Pulled ?? 0}</div>
                 </div>
               </div>
             </div>
