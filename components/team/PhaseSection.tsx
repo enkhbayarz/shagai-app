@@ -97,9 +97,8 @@ export function PhaseSection({
         {displayShooters.map((shooter, displayIndex) => {
           const originalIndex = getOriginalIndex(displayIndex);
           const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
-          // Calculate display color based on position: left half = orange, right half = blue
-          const halfPoint = Math.ceil(displayShooters.length / 2);
-          const displayColor: "orange" | "blue" = displayIndex < halfPoint ? "orange" : "blue";
+          // Color by team identity (away = orange/left side, home = blue/right side)
+          const displayColor: "orange" | "blue" = shooter.team === "away" ? "orange" : "blue";
 
           return (
             <TeamPlayerCard
