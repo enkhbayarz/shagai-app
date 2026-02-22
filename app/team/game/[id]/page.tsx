@@ -33,6 +33,12 @@ export default function TeamGamePage() {
   );
   const [viewingSet, setViewingSet] = useState<1 | 2>(1);
 
+  // Portal target for header action button
+  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setHeaderEl(document.getElementById("header-action"));
+  }, []);
+
   // Validate route param before casting
   const rawId = params.id;
   if (!rawId || typeof rawId !== "string") {
@@ -332,12 +338,6 @@ export default function TeamGamePage() {
 
   const isFinished = game.status === "finished";
   const isGoldenPoint = game.goldenPoint?.isActive;
-
-  // Portal target for header action button
-  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setHeaderEl(document.getElementById("header-action"));
-  }, []);
 
   return (
     <div className="min-h-screen pb-52">
