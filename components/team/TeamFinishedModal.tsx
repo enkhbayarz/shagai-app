@@ -279,6 +279,7 @@ export function TeamFinishedModal({
                                       awayTeamPlayers={awayTeamPlayers}
                                       awayColor={awayColor}
                                       homeColor={homeColor}
+                                      compact
                                     />
                                   </div>
                                 );

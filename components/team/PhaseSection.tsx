@@ -30,6 +30,7 @@ interface PhaseSectionProps {
   onEditPlayerName?: (team: "home" | "away", playerIndex: number) => void;
   awayColor?: TeamColor;
   homeColor?: TeamColor;
+  compact?: boolean;
 }
 
 const phaseTypeLabels: Record<string, string> = {
@@ -49,6 +50,7 @@ export function PhaseSection({
   onEditPlayerName,
   awayColor,
   homeColor,
+  compact,
 }: PhaseSectionProps) {
   const bgColor = isActive ? "bg-amber-50" : "bg-gray-100";
   const borderColor = isActive ? "border-amber-300" : "border-gray-200";
@@ -74,6 +76,40 @@ export function PhaseSection({
     return displayIndex;
   };
 
+  const shootersContent = (
+    <div className="flex justify-center gap-1 overflow-x-auto pb-1">
+      {displayShooters.map((shooter, displayIndex) => {
+        const originalIndex = getOriginalIndex(displayIndex);
+        const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
+        const displayColorForShooter: TeamColor =
+          shooter.team === "away"
+            ? (awayColor ?? "orange")
+            : (homeColor ?? "blue");
+
+        return (
+          <TeamPlayerCard
+            key={`${shooter.team}-${shooter.playerIndex}-${displayIndex}`}
+            name={getPlayerName(shooter.team, shooter.playerIndex)}
+            team={shooter.team}
+            playerIndex={shooter.playerIndex}
+            shots={shooter.shots}
+            isCurrentShooter={isCurrentShooter}
+            currentShotIndex={isCurrentShooter ? currentShotIndex : undefined}
+            onEditShot={
+              onEditShot ? (shotIndex) => onEditShot(originalIndex, shotIndex) : undefined
+            }
+            onEditName={onEditPlayerName}
+            displayColor={displayColorForShooter}
+          />
+        );
+      })}
+    </div>
+  );
+
+  if (compact) {
+    return shootersContent;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -96,33 +132,7 @@ export function PhaseSection({
       </div>
 
       {/* Shooters Grid */}
-      <div className="flex justify-center gap-1 overflow-x-auto pb-1">
-        {displayShooters.map((shooter, displayIndex) => {
-          const originalIndex = getOriginalIndex(displayIndex);
-          const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
-          const displayColorForShooter: TeamColor =
-            shooter.team === "away"
-              ? (awayColor ?? "orange")
-              : (homeColor ?? "blue");
-
-          return (
-            <TeamPlayerCard
-              key={`${shooter.team}-${shooter.playerIndex}-${displayIndex}`}
-              name={getPlayerName(shooter.team, shooter.playerIndex)}
-              team={shooter.team}
-              playerIndex={shooter.playerIndex}
-              shots={shooter.shots}
-              isCurrentShooter={isCurrentShooter}
-              currentShotIndex={isCurrentShooter ? currentShotIndex : undefined}
-              onEditShot={
-                onEditShot ? (shotIndex) => onEditShot(originalIndex, shotIndex) : undefined
-              }
-              onEditName={onEditPlayerName}
-              displayColor={displayColorForShooter}
-            />
-          );
-        })}
-      </div>
+      {shootersContent}
     </motion.div>
   );
 }
