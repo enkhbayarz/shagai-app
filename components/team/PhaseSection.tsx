@@ -93,7 +93,7 @@ export function PhaseSection({
       </div>
 
       {/* Shooters Grid */}
-      <div className="flex justify-center gap-1 overflow-x-auto pb-1">
+      <div className="grid grid-cols-2 justify-items-center gap-2 max-w-[200px] mx-auto">
         {displayShooters.map((shooter, displayIndex) => {
           const originalIndex = getOriginalIndex(displayIndex);
           const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
