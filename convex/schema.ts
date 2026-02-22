@@ -155,6 +155,8 @@ export default defineSchema({
     awayTeamName: v.optional(v.string()), // "Баг 1" or actual team name
     homeTeamTag: v.optional(v.string()), // Optional tag from clan
     awayTeamTag: v.optional(v.string()), // Optional tag from clan
+    homeTeamColor: v.optional(v.string()), // TeamColor name e.g. "blue"
+    awayTeamColor: v.optional(v.string()), // TeamColor name e.g. "orange"
     playersPerTeam: v.union(v.literal(3), v.literal(4), v.literal(5), v.literal(6)),
 
     // Metadata

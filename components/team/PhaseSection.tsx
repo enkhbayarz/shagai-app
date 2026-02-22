@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TeamPlayerCard } from "./TeamPlayerCard";
+import { type TeamColor } from "@/lib/team-colors";
 
 interface Shooter {
   team: "home" | "away";
@@ -27,6 +28,8 @@ interface PhaseSectionProps {
   awayTeamPlayers: { name: string }[];
   onEditShot?: (shooterIndex: number, shotIndex: number) => void;
   onEditPlayerName?: (team: "home" | "away", playerIndex: number) => void;
+  awayColor?: TeamColor;
+  homeColor?: TeamColor;
 }
 
 const phaseTypeLabels: Record<string, string> = {
@@ -44,6 +47,8 @@ export function PhaseSection({
   awayTeamPlayers,
   onEditShot,
   onEditPlayerName,
+  awayColor,
+  homeColor,
 }: PhaseSectionProps) {
   const bgColor = isActive ? "bg-amber-50" : "bg-gray-100";
   const borderColor = isActive ? "border-amber-300" : "border-gray-200";
@@ -57,8 +62,6 @@ export function PhaseSection({
   };
 
   // For RTL direction, reverse the display order so rightmost shooter appears on the right
-  // Visual: Yellow P2 | Blue P2 | Yellow P1 | Blue P1 (left to right)
-  // Shooting order (array): Home P1, Away P1, Home P2, Away P2
   const displayShooters = phase.direction === "rtl"
     ? [...phase.shooters].reverse()
     : phase.shooters;
@@ -93,12 +96,14 @@ export function PhaseSection({
       </div>
 
       {/* Shooters Grid */}
-      <div className="flex justify-center gap-1 overflow-x-auto pb-1"> 
+      <div className="flex justify-center gap-1 overflow-x-auto pb-1">
         {displayShooters.map((shooter, displayIndex) => {
           const originalIndex = getOriginalIndex(displayIndex);
           const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
-          // Color by team identity (away = orange/left side, home = blue/right side)
-          const displayColor: "orange" | "blue" = shooter.team === "away" ? "orange" : "blue";
+          const displayColorForShooter: TeamColor =
+            shooter.team === "away"
+              ? (awayColor ?? "orange")
+              : (homeColor ?? "blue");
 
           return (
             <TeamPlayerCard
@@ -113,7 +118,7 @@ export function PhaseSection({
                 onEditShot ? (shotIndex) => onEditShot(originalIndex, shotIndex) : undefined
               }
               onEditName={onEditPlayerName}
-              displayColor={displayColor}
+              displayColor={displayColorForShooter}
             />
           );
         })}

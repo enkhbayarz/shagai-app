@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Play, Edit2, Users, User } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { type TeamColor, TEAM_COLOR_OPTIONS, getTeamColors, teamColorMap } from "@/lib/team-colors";
 
 interface TeamPlayer {
   name: string;
@@ -24,6 +25,10 @@ export default function TeamSetupPage() {
   const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6>(6);
   const [homeTeamName, setHomeTeamName] = useState("Баг 2");
   const [awayTeamName, setAwayTeamName] = useState("Баг 1");
+  const [awayTeamColor, setAwayTeamColor] = useState<TeamColor>("orange");
+  const [homeTeamColor, setHomeTeamColor] = useState<TeamColor>("blue");
+  const [awayColorOpen, setAwayColorOpen] = useState(false);
+  const [homeColorOpen, setHomeColorOpen] = useState(false);
   const [isEditingHomeName, setIsEditingHomeName] = useState(false);
   const [isEditingAwayName, setIsEditingAwayName] = useState(false);
 
@@ -243,6 +248,8 @@ export default function TeamSetupPage() {
         awayClanId: selectedAwayClanId ?? undefined,
         homeTeamPlayers: homeTeamPlayersWithBench,
         awayTeamPlayers: awayTeamPlayersWithBench,
+        homeTeamColor: homeTeamColor,
+        awayTeamColor: awayTeamColor,
       });
 
       router.push(`/team/game/${gameId}`);
@@ -251,6 +258,9 @@ export default function TeamSetupPage() {
       setIsCreating(false);
     }
   };
+
+  const ac = getTeamColors(awayTeamColor, "orange"); // away colors
+  const hc = getTeamColors(homeTeamColor, "blue");   // home colors
 
   return (
     <div className="min-h-screen px-4 py-6">
@@ -297,13 +307,47 @@ export default function TeamSetupPage() {
           className="grid grid-cols-2 gap-3"
         >
           {/* Away Team (Left) */}
-          <Card className="glass border-orange-200">
+          <Card className={`glass ${ac.border200}`}>
             <CardContent className="py-4">
               {/* Team Name */}
               <div className="relative mb-3">
                 <div className="flex items-center justify-center gap-1">
-                  <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
-                    1
+                  {/* Tappable badge with radial color picker */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setAwayColorOpen(!awayColorOpen)}
+                      className={`w-6 h-6 rounded-full ${ac.bg500} text-white flex items-center justify-center text-xs font-bold touch-manipulation transition-transform ${awayColorOpen ? "scale-110" : ""}`}
+                    >
+                      1
+                    </button>
+                    <AnimatePresence>
+                      {awayColorOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setAwayColorOpen(false)} />
+                          {TEAM_COLOR_OPTIONS.map((color, i) => {
+                            const angle = Math.PI - (Math.PI / (TEAM_COLOR_OPTIONS.length - 1)) * i;
+                            const radius = 56;
+                            const x = radius * Math.cos(angle);
+                            const y = radius * Math.sin(angle);
+                            const isSelected = awayTeamColor === color;
+                            const isTaken = color === homeTeamColor;
+                            return (
+                              <motion.button
+                                key={color}
+                                initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                animate={{ scale: isTaken ? 0.6 : 1, x, y: -y, opacity: isTaken ? 0.3 : 1 }}
+                                exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                transition={{ delay: i * 0.025, type: "spring", stiffness: 500, damping: 25 }}
+                                disabled={isTaken}
+                                onClick={(e) => { e.stopPropagation(); if (!isTaken) { setAwayTeamColor(color); setAwayColorOpen(false); } }}
+                                className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full shadow-lg touch-manipulation ${isTaken ? "cursor-not-allowed" : ""} ${isSelected ? "ring-[3px] ring-white ring-offset-2" : "border-2 border-white/50"}`}
+                                style={{ backgroundColor: teamColorMap[color].hex }}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
                   {isEditingAwayName ? (
                     <Input
@@ -325,7 +369,7 @@ export default function TeamSetupPage() {
                   ) : (
                     <button
                       onClick={() => setIsEditingAwayName(true)}
-                      className="text-sm font-medium flex items-center gap-1 hover:text-orange-600 transition-colors"
+                      className={`text-sm font-medium flex items-center gap-1 ${ac.hoverText600} transition-colors`}
                     >
                       {awayTeamName}
                       <Edit2 className="w-3 h-3 text-muted-foreground" />
@@ -349,9 +393,9 @@ export default function TeamSetupPage() {
                             key={team._id}
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleSelectAwayTeam(team)}
-                            className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                            className={`w-full px-3 py-2 text-left ${ac.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
                           >
-                            <Users className="w-3 h-3 text-orange-400" />
+                            <Users className={`w-3 h-3 ${ac.text400}`} />
                             <span className="font-medium">{team.name}</span>
                             <span className="text-muted-foreground">
                               [{team.tag}]
@@ -421,9 +465,9 @@ export default function TeamSetupPage() {
                                     onClick={() =>
                                       handleSelectAwayPlayer(index, user)
                                     }
-                                    className="w-full px-3 py-2 text-left hover:bg-orange-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                                    className={`w-full px-3 py-2 text-left ${ac.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
                                   >
-                                    <User className="w-3 h-3 text-orange-400" />
+                                    <User className={`w-3 h-3 ${ac.text400}`} />
                                     <span className="font-medium">
                                       {user.fullName}
                                     </span>
@@ -440,7 +484,7 @@ export default function TeamSetupPage() {
                     ) : (
                       <button
                         onClick={() => togglePlayerEdit("away", index)}
-                        className="w-full text-xs bg-orange-50 hover:bg-orange-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between"
+                        className={`w-full text-xs ${ac.bg50} ${ac.hoverBg100} rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between`}
                       >
                         <span>
                           {index + 1}. {player.name}
@@ -452,8 +496,8 @@ export default function TeamSetupPage() {
                 ))}
 
                 {/* Bench Player */}
-                <div className="mt-2 pt-2 border-t border-orange-200">
-                  <div className="text-[10px] text-orange-600 font-medium mb-1">
+                <div className={`mt-2 pt-2 border-t ${ac.border200}`}>
+                  <div className={`text-[10px] ${ac.text600} font-medium mb-1`}>
                     Сэлгээний тоглогч
                   </div>
                   {awayBenchPlayer.isEditing ? (
@@ -502,13 +546,47 @@ export default function TeamSetupPage() {
           </Card>
 
           {/* Home Team (Right) */}
-          <Card className="glass border-blue-200">
+          <Card className={`glass ${hc.border200}`}>
             <CardContent className="py-4">
               {/* Team Name */}
               <div className="relative mb-3">
                 <div className="flex items-center justify-center gap-1">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
-                    2
+                  {/* Tappable badge with radial color picker */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setHomeColorOpen(!homeColorOpen)}
+                      className={`w-6 h-6 rounded-full ${hc.bg500} text-white flex items-center justify-center text-xs font-bold touch-manipulation transition-transform ${homeColorOpen ? "scale-110" : ""}`}
+                    >
+                      2
+                    </button>
+                    <AnimatePresence>
+                      {homeColorOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setHomeColorOpen(false)} />
+                          {TEAM_COLOR_OPTIONS.map((color, i) => {
+                            const angle = Math.PI - (Math.PI / (TEAM_COLOR_OPTIONS.length - 1)) * i;
+                            const radius = 56;
+                            const x = radius * Math.cos(angle);
+                            const y = radius * Math.sin(angle);
+                            const isSelected = homeTeamColor === color;
+                            const isTaken = color === awayTeamColor;
+                            return (
+                              <motion.button
+                                key={color}
+                                initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                animate={{ scale: isTaken ? 0.6 : 1, x, y: -y, opacity: isTaken ? 0.3 : 1 }}
+                                exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                transition={{ delay: i * 0.025, type: "spring", stiffness: 500, damping: 25 }}
+                                disabled={isTaken}
+                                onClick={(e) => { e.stopPropagation(); if (!isTaken) { setHomeTeamColor(color); setHomeColorOpen(false); } }}
+                                className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full shadow-lg touch-manipulation ${isTaken ? "cursor-not-allowed" : ""} ${isSelected ? "ring-[3px] ring-white ring-offset-2" : "border-2 border-white/50"}`}
+                                style={{ backgroundColor: teamColorMap[color].hex }}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
                   {isEditingHomeName ? (
                     <Input
@@ -530,7 +608,7 @@ export default function TeamSetupPage() {
                   ) : (
                     <button
                       onClick={() => setIsEditingHomeName(true)}
-                      className="text-sm font-medium flex items-center gap-1 hover:text-blue-600 transition-colors"
+                      className={`text-sm font-medium flex items-center gap-1 ${hc.hoverText600} transition-colors`}
                     >
                       {homeTeamName}
                       <Edit2 className="w-3 h-3 text-muted-foreground" />
@@ -554,9 +632,9 @@ export default function TeamSetupPage() {
                             key={team._id}
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleSelectHomeTeam(team)}
-                            className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                            className={`w-full px-3 py-2 text-left ${hc.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
                           >
-                            <Users className="w-3 h-3 text-blue-400" />
+                            <Users className={`w-3 h-3 ${hc.text400}`} />
                             <span className="font-medium">{team.name}</span>
                             <span className="text-muted-foreground">
                               [{team.tag}]
@@ -626,9 +704,9 @@ export default function TeamSetupPage() {
                                     onClick={() =>
                                       handleSelectHomePlayer(index, user)
                                     }
-                                    className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-2 text-xs border-b last:border-b-0"
+                                    className={`w-full px-3 py-2 text-left ${hc.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
                                   >
-                                    <User className="w-3 h-3 text-blue-400" />
+                                    <User className={`w-3 h-3 ${hc.text400}`} />
                                     <span className="font-medium">
                                       {user.fullName}
                                     </span>
@@ -645,7 +723,7 @@ export default function TeamSetupPage() {
                     ) : (
                       <button
                         onClick={() => togglePlayerEdit("home", index)}
-                        className="w-full text-xs bg-blue-50 hover:bg-blue-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between"
+                        className={`w-full text-xs ${hc.bg50} ${hc.hoverBg100} rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between`}
                       >
                         <span>
                           {index + 1}. {player.name}
@@ -657,8 +735,8 @@ export default function TeamSetupPage() {
                 ))}
 
                 {/* Bench Player */}
-                <div className="mt-2 pt-2 border-t border-blue-200">
-                  <div className="text-[10px] text-blue-600 font-medium mb-1">
+                <div className={`mt-2 pt-2 border-t ${hc.border200}`}>
+                  <div className={`text-[10px] ${hc.text600} font-medium mb-1`}>
                     Сэлгээний тоглогч
                   </div>
                   {homeBenchPlayer.isEditing ? (

@@ -17,6 +17,7 @@ import {
   TeamGameControls,
   TeamFinishedModal,
 } from "@/components/team";
+import { TeamColor } from "@/lib/team-colors";
 
 export default function TeamGamePage() {
   const params = useParams();
@@ -158,6 +159,9 @@ export default function TeamGamePage() {
       </div>
     );
   }
+
+  const awayColor = (game?.awayTeamColor as TeamColor) ?? undefined;
+  const homeColor = (game?.homeTeamColor as TeamColor) ?? undefined;
 
   const currentSet = game.sets[game.currentSet - 1];
   const currentPhase = currentSet?.phases[game.currentPhaseIndex];
@@ -364,6 +368,8 @@ export default function TeamGamePage() {
           awayClanTag={game.awayClanTag}
           homeScore={displayedSet?.homeScore ?? 0}
           awayScore={displayedSet?.awayScore ?? 0}
+          homePulled={displayedSet?.homePulled ?? 0}
+          awayPulled={displayedSet?.awayPulled ?? 0}
           currentSet={viewingSet}
           set1Result={
             viewingSet === 2
@@ -376,6 +382,8 @@ export default function TeamGamePage() {
               : undefined
           }
           onEditTeamName={!isFinished ? handleEditTeamName : undefined}
+          awayColor={awayColor}
+          homeColor={homeColor}
         />
 
       </div>
@@ -442,6 +450,8 @@ export default function TeamGamePage() {
                   onEditPlayerName={
                     !isFinished ? handleOpenEditPlayerName : undefined
                   }
+                  awayColor={awayColor}
+                  homeColor={homeColor}
                 />
               </div>
             );
@@ -459,6 +469,8 @@ export default function TeamGamePage() {
           onSkip={handleRecordSkip}
           showSkipButton={shouldShowSkipButton()}
           disabled={isRecording}
+          awayColor={awayColor}
+          homeColor={homeColor}
         />
       )}
 
@@ -472,6 +484,8 @@ export default function TeamGamePage() {
           awayClanTag={game.awayClanTag}
           result={game.result}
           gameId={gameId}
+          awayColor={awayColor}
+          homeColor={homeColor}
         />
       )}
 

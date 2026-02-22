@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { type TeamColor, getTeamColors } from "@/lib/team-colors";
 
 interface TeamGameControlsProps {
   currentShooterName: string;
@@ -11,6 +12,8 @@ interface TeamGameControlsProps {
   onSkip?: () => void;
   showSkipButton?: boolean;
   disabled?: boolean;
+  awayColor?: TeamColor;
+  homeColor?: TeamColor;
 }
 
 export function TeamGameControls({
@@ -22,8 +25,14 @@ export function TeamGameControls({
   onSkip,
   showSkipButton = false,
   disabled = false,
+  awayColor,
+  homeColor,
 }: TeamGameControlsProps) {
-  const teamColor = currentTeam === "home" ? "text-blue-600" : "text-orange-600";
+  const c = getTeamColors(
+    currentTeam === "home" ? homeColor : awayColor,
+    currentTeam === "home" ? "blue" : "orange"
+  );
+  const teamColor = c.text600;
   const teamLabel = currentTeam === "home" ? "Эзэн" : "Зочин";
 
   return (

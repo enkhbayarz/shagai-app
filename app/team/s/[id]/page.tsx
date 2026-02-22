@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Trophy, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { PhaseSection } from "@/components/team";
+import { type TeamColor, getTeamColors } from "@/lib/team-colors";
 
 const phaseTypeLabels: Record<string, string> = {
   niileg: "НИЙЛЛЭГ ҮЕ",
@@ -141,12 +142,17 @@ export default function TeamSharePage() {
   }
 
   const result = game.result;
+
+  const awayColor = (game.awayTeamColor as TeamColor) ?? undefined;
+  const homeColor = (game.homeTeamColor as TeamColor) ?? undefined;
+  const ac = getTeamColors(awayColor, "orange");
+  const hc = getTeamColors(homeColor, "blue");
+
   const winnerName =
     result.winner === "home" ? game.homeClanName : game.awayClanName;
   const winnerTag =
     result.winner === "home" ? game.homeClanTag : game.awayClanTag;
-  const winnerColor =
-    result.winner === "home" ? "text-blue-500" : "text-orange-500";
+  const wc = result.winner === "home" ? hc : ac;
 
   const homePlayerStats = computePlayerStats(
     game.sets,
@@ -189,14 +195,12 @@ export default function TeamSharePage() {
           className="text-center mb-6"
         >
           <div
-            className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
-              result.winner === "home" ? "bg-blue-100" : "bg-orange-100"
-            }`}
+            className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${wc.bg100}`}
           >
-            <Trophy className={`w-10 h-10 ${winnerColor}`} />
+            <img src="/app_icon.svg" alt="Шагай Харваа" className="w-10 h-10" />
           </div>
           <h2 className="text-2xl font-bold">Тоглолт дууслаа!</h2>
-          <p className={`text-lg font-medium ${winnerColor} mt-1`}>
+          <p className={`text-lg font-medium ${wc.text500} mt-1`}>
             {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо!
           </p>
           {result.wasGoldenPoint && (
@@ -217,8 +221,8 @@ export default function TeamSharePage() {
           <div className="grid grid-cols-3 gap-4 mb-6">
             {/* Away Team */}
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-orange-100 mx-auto mb-2 flex items-center justify-center">
-                <span className="text-orange-600 font-bold">
+              <div className={`w-12 h-12 rounded-full ${ac.bg100} mx-auto mb-2 flex items-center justify-center`}>
+                <span className={`${ac.text600} font-bold`}>
                   {game.awayClanTag?.[0] ?? game.awayClanName?.[0] ?? "З"}
                 </span>
               </div>
@@ -237,8 +241,8 @@ export default function TeamSharePage() {
 
             {/* Home Team */}
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-blue-100 mx-auto mb-2 flex items-center justify-center">
-                <span className="text-blue-600 font-bold">
+              <div className={`w-12 h-12 rounded-full ${hc.bg100} mx-auto mb-2 flex items-center justify-center`}>
+                <span className={`${hc.text600} font-bold`}>
                   {game.homeClanTag?.[0] ?? game.homeClanName?.[0] ?? "Э"}
                 </span>
               </div>
@@ -252,56 +256,43 @@ export default function TeamSharePage() {
           </div>
 
           {/* Set Scores */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2">
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">
-                {result.awaySet1Score}
+              <div className={`text-xl font-bold ${ac.text600}`}>
+                {result.awaySet1Score - (result.awaySet1Pulled ?? 0)}
+                {(result.awaySet1Pulled ?? 0) > 0 && (
+                  <span className="text-xs font-normal ml-0.5">(+{result.awaySet1Pulled})</span>
+                )}
               </div>
               <div className="text-sm text-muted-foreground self-center">
                 Эхэн өрөг
               </div>
-              <div className="text-xl font-bold text-blue-600">
-                {result.homeSet1Score}
+              <div className={`text-xl font-bold ${hc.text600}`}>
+                {result.homeSet1Score - (result.homeSet1Pulled ?? 0)}
+                {(result.homeSet1Pulled ?? 0) > 0 && (
+                  <span className="text-xs font-normal ml-0.5">(+{result.homeSet1Pulled})</span>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center py-2 bg-gray-50 rounded-lg">
-              <div className="text-xl font-bold text-orange-600">
-                {result.awaySet2Score}
+              <div className={`text-xl font-bold ${ac.text600}`}>
+                {result.awaySet2Score - (result.awaySet2Pulled ?? 0)}
+                {(result.awaySet2Pulled ?? 0) > 0 && (
+                  <span className="text-xs font-normal ml-0.5">(+{result.awaySet2Pulled})</span>
+                )}
               </div>
               <div className="text-sm text-muted-foreground self-center">
                 Дунд өрөг
               </div>
-              <div className="text-xl font-bold text-blue-600">
-                {result.homeSet2Score}
+              <div className={`text-xl font-bold ${hc.text600}`}>
+                {result.homeSet2Score - (result.homeSet2Pulled ?? 0)}
+                {(result.homeSet2Pulled ?? 0) > 0 && (
+                  <span className="text-xs font-normal ml-0.5">(+{result.homeSet2Pulled})</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Pulled Points Per Set */}
-          <div className="space-y-2 pt-4 border-t">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="text-sm font-bold text-orange-600">
-                +{result.awaySet1Pulled ?? 0}
-              </div>
-              <div className="text-xs text-muted-foreground self-center">
-                Эхэн өрөг таталт
-              </div>
-              <div className="text-sm font-bold text-blue-600">
-                +{result.homeSet1Pulled ?? 0}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="text-sm font-bold text-orange-600">
-                +{result.awaySet2Pulled ?? 0}
-              </div>
-              <div className="text-xs text-muted-foreground self-center">
-                Дунд өрөг таталт
-              </div>
-              <div className="text-sm font-bold text-blue-600">
-                +{result.homeSet2Pulled ?? 0}
-              </div>
-            </div>
-          </div>
         </motion.div>
 
         {/* Set Details - Expandable */}
@@ -352,7 +343,7 @@ export default function TeamSharePage() {
                       return (
                         <div key={phaseIndex}>
                           <div className="flex items-center justify-between text-xs mb-1 px-1">
-                            <span className="text-orange-600 font-medium">
+                            <span className={`${ac.text600} font-medium`}>
                               {summary.awayHits}/{summary.awayTotal}
                             </span>
                             <span className="text-muted-foreground">
@@ -360,7 +351,7 @@ export default function TeamSharePage() {
                                 phase.phaseType}{" "}
                               #{phase.cycle}
                             </span>
-                            <span className="text-blue-600 font-medium">
+                            <span className={`${hc.text600} font-medium`}>
                               {summary.homeHits}/{summary.homeTotal}
                             </span>
                           </div>
@@ -371,6 +362,8 @@ export default function TeamSharePage() {
                             currentShotIndex={-1}
                             homeTeamPlayers={game.homeTeam.players}
                             awayTeamPlayers={game.awayTeam.players}
+                            awayColor={awayColor}
+                            homeColor={homeColor}
                           />
                         </div>
                       );
@@ -390,8 +383,8 @@ export default function TeamSharePage() {
           className="grid grid-cols-2 gap-4 mb-6"
         >
           {/* Away Players */}
-          <div className="bg-orange-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-orange-700 mb-3">
+          <div className={`${ac.bg50} rounded-xl p-4`}>
+            <h3 className={`text-sm font-medium ${ac.text700} mb-3`}>
               {game.awayClanName}
             </h3>
             <div className="space-y-2">
@@ -400,7 +393,7 @@ export default function TeamSharePage() {
                 .map((p, i) => (
                   <div key={i}>
                     <div className="text-sm truncate">{p.name}</div>
-                    <div className="text-xs font-mono text-orange-700/70">
+                    <div className={`text-xs font-mono ${ac.text70070}`}>
                       {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
                       {p.overall.total})
                     </div>
@@ -423,8 +416,8 @@ export default function TeamSharePage() {
           </div>
 
           {/* Home Players */}
-          <div className="bg-blue-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-blue-700 mb-3">
+          <div className={`${hc.bg50} rounded-xl p-4`}>
+            <h3 className={`text-sm font-medium ${hc.text700} mb-3`}>
               {game.homeClanName}
             </h3>
             <div className="space-y-2">
@@ -433,7 +426,7 @@ export default function TeamSharePage() {
                 .map((p, i) => (
                   <div key={i}>
                     <div className="text-sm truncate">{p.name}</div>
-                    <div className="text-xs font-mono text-blue-700/70">
+                    <div className={`text-xs font-mono ${hc.text70070}`}>
                       {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
                       {p.overall.total})
                     </div>

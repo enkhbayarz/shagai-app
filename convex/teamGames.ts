@@ -235,6 +235,9 @@ export const create = mutation({
         })
       )
     ),
+    // Team colors (e.g. "blue", "orange", "red", "green", etc.)
+    homeTeamColor: v.optional(v.string()),
+    awayTeamColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Auth is optional - games can be created without login
@@ -344,6 +347,8 @@ export const create = mutation({
       awayTeamName,
       homeTeamTag,
       awayTeamTag,
+      homeTeamColor: args.homeTeamColor,
+      awayTeamColor: args.awayTeamColor,
       playersPerTeam,
       creatorId: user?._id,
       startedAt: Date.now(),
@@ -1304,6 +1309,8 @@ export const getPublic = query({
       homeClanTag,
       awayClanName,
       awayClanTag,
+      homeTeamColor: game.homeTeamColor,
+      awayTeamColor: game.awayTeamColor,
       homeTeam: {
         players: game.homeTeam.players.map((p) => ({
           name: p.name,
@@ -1548,6 +1555,8 @@ export const getLive = query({
       homeClanTag,
       awayClanName,
       awayClanTag,
+      homeTeamColor: game.homeTeamColor,
+      awayTeamColor: game.awayTeamColor,
       homeTeam: {
         players: game.homeTeam.players.map((p) => ({
           name: p.name,

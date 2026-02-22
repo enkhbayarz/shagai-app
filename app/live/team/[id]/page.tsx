@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { TeamScoreHeader } from "@/components/team/TeamScoreHeader";
 import { PhaseSection } from "@/components/team/PhaseSection";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type TeamColor } from "@/lib/team-colors";
 
 export default function TeamSpectatorPage() {
   const params = useParams();
@@ -59,6 +60,9 @@ export default function TeamSpectatorPage() {
   // Build team player arrays for PhaseSection
   const homeTeamPlayers = game.homeTeam.players;
   const awayTeamPlayers = game.awayTeam.players;
+
+  const awayColor = (game.awayTeamColor as TeamColor) ?? undefined;
+  const homeColor = (game.homeTeamColor as TeamColor) ?? undefined;
 
   return (
     <div className="min-h-screen pb-20">
@@ -110,6 +114,8 @@ export default function TeamSpectatorPage() {
           awayClanTag={game.awayClanTag}
           homeScore={currentSet.homeScore}
           awayScore={currentSet.awayScore}
+          homePulled={currentSet.homePulled ?? 0}
+          awayPulled={currentSet.awayPulled ?? 0}
           currentSet={game.currentSet as 1 | 2}
           set1Result={
             game.currentSet === 2
@@ -121,6 +127,8 @@ export default function TeamSpectatorPage() {
                 }
               : undefined
           }
+          awayColor={awayColor}
+          homeColor={homeColor}
           // No onEditTeamName - read-only mode
         />
 
@@ -156,6 +164,8 @@ export default function TeamSpectatorPage() {
                   currentShotIndex={game.currentShotInTurn}
                   homeTeamPlayers={homeTeamPlayers}
                   awayTeamPlayers={awayTeamPlayers}
+                  awayColor={awayColor}
+                  homeColor={homeColor}
                   // No onEditShot - read-only mode
                 />
               );

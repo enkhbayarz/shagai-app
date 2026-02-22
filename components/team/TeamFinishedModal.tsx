@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Home, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { type TeamColor, getTeamColors } from "@/lib/team-colors";
 
 interface TeamFinishedModalProps {
   open: boolean;
@@ -27,6 +28,8 @@ interface TeamFinishedModalProps {
     wasGoldenPoint: boolean;
   };
   gameId: string;
+  awayColor?: TeamColor;
+  homeColor?: TeamColor;
 }
 
 export function TeamFinishedModal({
@@ -37,14 +40,19 @@ export function TeamFinishedModal({
   awayClanTag,
   result,
   gameId,
+  awayColor,
+  homeColor,
 }: TeamFinishedModalProps) {
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const ac = getTeamColors(awayColor, "orange");
+  const hc = getTeamColors(homeColor, "blue");
+
   const winnerName = result.winner === "home" ? homeClanName : awayClanName;
   const winnerTag = result.winner === "home" ? homeClanTag : awayClanTag;
-  const winnerColor = result.winner === "home" ? "text-blue-500" : "text-orange-500";
+  const wc = result.winner === "home" ? hc : ac;
 
   // Set shareUrl client-side to avoid SSR issues
   useEffect(() => {
@@ -92,9 +100,7 @@ export function TeamFinishedModal({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", delay: 0.2 }}
-                className={`w-20 h-20 rounded-full flex items-center justify-center ${
-                  result.winner === "home" ? "bg-blue-100" : "bg-orange-100"
-                }`}
+                className={`w-20 h-20 rounded-full flex items-center justify-center ${wc.bg100}`}
               >
                 <img src="/app_icon.svg" alt="Шагай Харваа" className="w-10 h-10" />
               </motion.div>
@@ -102,7 +108,7 @@ export function TeamFinishedModal({
 
             {/* Winner Announcement */}
             <h2 className="text-2xl font-bold text-center mb-1">Тоглолт дууслаа!</h2>
-            <p className={`text-center text-lg font-medium ${winnerColor} mb-4`}>
+            <p className={`text-center text-lg font-medium ${wc.text500} mb-4`}>
               {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо!
             </p>
 
@@ -120,16 +126,14 @@ export function TeamFinishedModal({
               <div className="grid grid-cols-3 gap-2 text-center">
                 {/* Away Team */}
                 <div>
-                  <div className="text-xs text-orange-500 font-medium">Зочин</div>
-                  <div className="font-medium text-sm truncate">
+                  <div className={`font-medium text-sm truncate ${ac.text600}`}>
                     {awayClanTag ? `[${awayClanTag}]` : awayClanName}
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground">VS</div>
                 {/* Home Team */}
                 <div>
-                  <div className="text-xs text-blue-500 font-medium">Эзэн</div>
-                  <div className="font-medium text-sm truncate">
+                  <div className={`font-medium text-sm truncate ${hc.text600}`}>
                     {homeClanTag ? `[${homeClanTag}]` : homeClanName}
                   </div>
                 </div>
@@ -138,14 +142,14 @@ export function TeamFinishedModal({
               {/* Set Scores */}
               <div className="mt-3 space-y-1">
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="text-orange-600 font-bold">
+                  <div className={`${ac.text600} font-bold`}>
                     {result.awaySet1Score - (result.awaySet1Pulled ?? 0)}
                     {(result.awaySet1Pulled ?? 0) > 0 && (
                       <span className="text-xs font-normal ml-0.5">(+{result.awaySet1Pulled})</span>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">Эхэн өрөг</div>
-                  <div className="text-blue-600 font-bold">
+                  <div className={`${hc.text600} font-bold`}>
                     {result.homeSet1Score - (result.homeSet1Pulled ?? 0)}
                     {(result.homeSet1Pulled ?? 0) > 0 && (
                       <span className="text-xs font-normal ml-0.5">(+{result.homeSet1Pulled})</span>
@@ -153,14 +157,14 @@ export function TeamFinishedModal({
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="text-orange-600 font-bold">
+                  <div className={`${ac.text600} font-bold`}>
                     {result.awaySet2Score - (result.awaySet2Pulled ?? 0)}
                     {(result.awaySet2Pulled ?? 0) > 0 && (
                       <span className="text-xs font-normal ml-0.5">(+{result.awaySet2Pulled})</span>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">Дунд өрөг</div>
-                  <div className="text-blue-600 font-bold">
+                  <div className={`${hc.text600} font-bold`}>
                     {result.homeSet2Score - (result.homeSet2Pulled ?? 0)}
                     {(result.homeSet2Pulled ?? 0) > 0 && (
                       <span className="text-xs font-normal ml-0.5">(+{result.homeSet2Pulled})</span>

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { User, Edit2 } from "lucide-react";
+import { type TeamColor, getTeamColors } from "@/lib/team-colors";
 
 interface TeamPlayerCardProps {
   name: string;
@@ -12,7 +13,7 @@ interface TeamPlayerCardProps {
   currentShotIndex?: number;
   onEditShot?: (shotIndex: number) => void;
   onEditName?: (team: "home" | "away", playerIndex: number) => void;
-  displayColor?: "orange" | "blue";
+  displayColor?: TeamColor;
 }
 
 export function TeamPlayerCard({
@@ -26,14 +27,8 @@ export function TeamPlayerCard({
   onEditName,
   displayColor,
 }: TeamPlayerCardProps) {
-  // Use displayColor if provided, otherwise fall back to team-based color
   const effectiveColor = displayColor ?? (team === "home" ? "blue" : "orange");
-  const borderColor = effectiveColor === "blue" ? "border-blue-500" : "border-orange-500";
-  const bgColor = isCurrentShooter
-    ? effectiveColor === "blue"
-      ? "bg-blue-50"
-      : "bg-orange-50"
-    : "bg-white";
+  const c = getTeamColors(effectiveColor, "orange");
 
   // Truncate name to max 8 characters
   const displayName = name.length > 8 ? name.slice(0, 8) + "…" : name;
@@ -42,7 +37,7 @@ export function TeamPlayerCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`relative rounded-lg border-2 ${borderColor} ${bgColor} p-2 w-[90px] flex-shrink-0 transition-all ${
+      className={`relative rounded-lg border-2 ${c.border500} ${isCurrentShooter ? c.bg50 : "bg-white"} p-2 w-[90px] flex-shrink-0 transition-all ${
         isCurrentShooter ? "ring-2 ring-amber-400 ring-offset-1" : ""
       }`}
     >
@@ -54,15 +49,9 @@ export function TeamPlayerCard({
       >
         <div className="flex justify-center mb-1 relative">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              effectiveColor === "blue" ? "bg-blue-100" : "bg-orange-100"
-            }`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${c.bg100}`}
           >
-            <User
-              className={`w-4 h-4 ${
-                effectiveColor === "blue" ? "text-blue-600" : "text-orange-600"
-              }`}
-            />
+            <User className={`w-4 h-4 ${c.text600}`} />
           </div>
           {onEditName && (
             <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-gray-200 rounded-full flex items-center justify-center">
