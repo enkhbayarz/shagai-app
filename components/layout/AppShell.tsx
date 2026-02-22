@@ -34,6 +34,7 @@ export function AppShell({ children, collapsed = false }: AppShellProps) {
               <span className="font-display text-lg tracking-wider">ШАГАЙ</span>
             </div>
           </div>
+          <div id="header-action" />
         </div>
         {/* Mobile Action Buttons - only show when not in collapsed/game mode */}
         {!collapsed && (

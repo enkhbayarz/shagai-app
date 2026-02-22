@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -332,8 +333,28 @@ export default function TeamGamePage() {
   const isFinished = game.status === "finished";
   const isGoldenPoint = game.goldenPoint?.isActive;
 
+  // Portal target for header action button
+  const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setHeaderEl(document.getElementById("header-action"));
+  }, []);
+
   return (
     <div className="min-h-screen pb-52">
+      {/* Set Toggle Button - portaled into AppShell header */}
+      {set2HasStarted &&
+        headerEl &&
+        createPortal(
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
+            className="text-xs"
+          >
+            {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
+          </Button>,
+          headerEl,
+        )}
       {/* Score Header */}
       <div className="sticky top-0 z-10 bg-white px-4 py-4">
         <TeamScoreHeader
@@ -357,19 +378,6 @@ export default function TeamGamePage() {
           onEditTeamName={!isFinished ? handleEditTeamName : undefined}
         />
 
-        {/* Set Toggle Button - only show if Set 2 has started */}
-        {set2HasStarted && (
-          <div className="flex justify-center mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
-              className="text-xs"
-            >
-              {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Golden Point Banner */}
