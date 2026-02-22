@@ -254,6 +254,9 @@ export default defineSchema({
       })
     ),
 
+    // Pending set transition (Set 1 score >= 30, awaiting user confirmation to create Set 2)
+    pendingSetTransition: v.optional(v.boolean()),
+
     // Game status
     status: v.union(v.literal("in_progress"), v.literal("finished")),
 

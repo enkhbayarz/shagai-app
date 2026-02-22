@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Home, Share2 } from "lucide-react";
+import { Copy, Check, Home, Share2, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { type TeamColor, getTeamColors } from "@/lib/team-colors";
+import { phaseTypeLabels, computePhaseSummary } from "@/lib/team-game-utils";
+import { PhaseSection } from "./PhaseSection";
 
 interface TeamFinishedModalProps {
   open: boolean;
@@ -30,6 +32,10 @@ interface TeamFinishedModalProps {
   gameId: string;
   awayColor?: TeamColor;
   homeColor?: TeamColor;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sets?: any[];
+  homeTeamPlayers?: { name: string; isSubstitute: boolean }[];
+  awayTeamPlayers?: { name: string; isSubstitute: boolean }[];
 }
 
 export function TeamFinishedModal({
@@ -42,8 +48,12 @@ export function TeamFinishedModal({
   gameId,
   awayColor,
   homeColor,
+  sets,
+  homeTeamPlayers,
+  awayTeamPlayers,
 }: TeamFinishedModalProps) {
   const [copied, setCopied] = useState(false);
+  const [expandedSet, setExpandedSet] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,13 +96,13 @@ export function TeamFinishedModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl my-8"
           >
             {/* Trophy Icon */}
             <div className="flex justify-center mb-4">
@@ -173,6 +183,88 @@ export function TeamFinishedModal({
                 </div>
               </div>
             </div>
+
+            {/* Set Details - Expandable */}
+            {sets && sets.length > 0 && homeTeamPlayers && awayTeamPlayers && (
+              <div className="space-y-3 mb-4">
+                {sets.map((set) => (
+                  <div
+                    key={set.setNumber}
+                    className="border rounded-xl overflow-hidden"
+                  >
+                    <button
+                      onClick={() =>
+                        setExpandedSet(
+                          expandedSet === set.setNumber ? null : set.setNumber
+                        )
+                      }
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors touch-manipulation"
+                    >
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm">
+                          {set.setNumber === 1 ? "Эхэн өрөг" : "Дунд өрөг"} –
+                          Дэлгэрэнгүй
+                        </h3>
+                        <span className="text-xs text-muted-foreground">
+                          ({set.phases.length} үе)
+                        </span>
+                      </div>
+                      {expandedSet === set.setNumber ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+
+                    <AnimatePresence>
+                      {expandedSet === set.setNumber && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-3 pb-3 space-y-3">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {set.phases.map((phase: any, phaseIndex: number) => {
+                              const summary = computePhaseSummary(phase);
+                              return (
+                                <div key={phaseIndex}>
+                                  <div className="flex items-center justify-between text-xs mb-1 px-1">
+                                    <span className={`${ac.text600} font-medium`}>
+                                      {summary.awayHits}/{summary.awayTotal}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {phaseTypeLabels[phase.phaseType] ||
+                                        phase.phaseType}{" "}
+                                      #{phase.cycle}
+                                    </span>
+                                    <span className={`${hc.text600} font-medium`}>
+                                      {summary.homeHits}/{summary.homeTotal}
+                                    </span>
+                                  </div>
+                                  <PhaseSection
+                                    phase={phase}
+                                    isActive={false}
+                                    currentShooterIndex={-1}
+                                    currentShotIndex={-1}
+                                    homeTeamPlayers={homeTeamPlayers}
+                                    awayTeamPlayers={awayTeamPlayers}
+                                    awayColor={awayColor}
+                                    homeColor={homeColor}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Share Section */}
             <div className="space-y-2 mb-4">

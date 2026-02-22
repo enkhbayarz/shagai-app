@@ -495,52 +495,6 @@ export default function TeamSetupPage() {
                   </div>
                 ))}
 
-                {/* Bench Player */}
-                <div className={`mt-2 pt-2 border-t ${ac.border200}`}>
-                  <div className={`text-[10px] ${ac.text600} font-medium mb-1`}>
-                    Сэлгээний тоглогч
-                  </div>
-                  {awayBenchPlayer.isEditing ? (
-                    <Input
-                      value={awayBenchPlayer.name}
-                      onChange={(e) =>
-                        setAwayBenchPlayer({
-                          ...awayBenchPlayer,
-                          name: e.target.value,
-                          userId: null,
-                        })
-                      }
-                      onBlur={() =>
-                        setAwayBenchPlayer({
-                          ...awayBenchPlayer,
-                          isEditing: false,
-                        })
-                      }
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        setAwayBenchPlayer({
-                          ...awayBenchPlayer,
-                          isEditing: false,
-                        })
-                      }
-                      className="h-8 text-xs text-center"
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      onClick={() =>
-                        setAwayBenchPlayer({
-                          ...awayBenchPlayer,
-                          isEditing: true,
-                        })
-                      }
-                      className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
-                    >
-                      <span>🪑 {awayBenchPlayer.name}</span>
-                      <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
-                    </button>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -734,52 +688,6 @@ export default function TeamSetupPage() {
                   </div>
                 ))}
 
-                {/* Bench Player */}
-                <div className={`mt-2 pt-2 border-t ${hc.border200}`}>
-                  <div className={`text-[10px] ${hc.text600} font-medium mb-1`}>
-                    Сэлгээний тоглогч
-                  </div>
-                  {homeBenchPlayer.isEditing ? (
-                    <Input
-                      value={homeBenchPlayer.name}
-                      onChange={(e) =>
-                        setHomeBenchPlayer({
-                          ...homeBenchPlayer,
-                          name: e.target.value,
-                          userId: null,
-                        })
-                      }
-                      onBlur={() =>
-                        setHomeBenchPlayer({
-                          ...homeBenchPlayer,
-                          isEditing: false,
-                        })
-                      }
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        setHomeBenchPlayer({
-                          ...homeBenchPlayer,
-                          isEditing: false,
-                        })
-                      }
-                      className="h-8 text-xs text-center"
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      onClick={() =>
-                        setHomeBenchPlayer({
-                          ...homeBenchPlayer,
-                          isEditing: true,
-                        })
-                      }
-                      className="w-full text-xs bg-amber-50 hover:bg-amber-100 rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between border border-dashed border-amber-300"
-                    >
-                      <span>🪑 {homeBenchPlayer.name}</span>
-                      <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
-                    </button>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>

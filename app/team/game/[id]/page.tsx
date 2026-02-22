@@ -17,7 +17,7 @@ import {
   TeamGameControls,
   TeamFinishedModal,
 } from "@/components/team";
-import { TeamColor } from "@/lib/team-colors";
+import { TeamColor, getTeamColors } from "@/lib/team-colors";
 
 export default function TeamGamePage() {
   const params = useParams();
@@ -33,6 +33,9 @@ export default function TeamGamePage() {
     undefined,
   );
   const [viewingSet, setViewingSet] = useState<1 | 2>(1);
+  const [showSetTransitionModal, setShowSetTransitionModal] = useState(false);
+  const [showScoreLimitError, setShowScoreLimitError] = useState(false);
+  const [isInEditMode, setIsInEditMode] = useState(false);
 
   // Portal target for header action button
   const [headerEl, setHeaderEl] = useState<HTMLElement | null>(null);
@@ -59,6 +62,7 @@ export default function TeamGamePage() {
   const updateTeamName = useMutation(api.teamGames.updateTeamName);
   const updatePlayerName = useMutation(api.teamGames.updatePlayerName);
   const substitutePlayer = useMutation(api.teamGames.substitutePlayer);
+  const confirmSetTransitionMutation = useMutation(api.teamGames.confirmSetTransition);
 
   // Substitution state
   const [substitutingTeam, setSubstitutingTeam] = useState<
@@ -86,12 +90,20 @@ export default function TeamGamePage() {
     }
   }, [game?.currentPhaseIndex]);
 
-  // Sync viewingSet with game's currentSet when it changes
+  // Sync viewingSet with game's currentSet when it changes (skip if pending transition)
   useEffect(() => {
-    if (game?.currentSet) {
+    if (game?.currentSet && !game.pendingSetTransition) {
       setViewingSet(game.currentSet as 1 | 2);
     }
-  }, [game?.currentSet]);
+  }, [game?.currentSet, game?.pendingSetTransition]);
+
+  // Detect pendingSetTransition and show confirmation modal
+  useEffect(() => {
+    if (game?.pendingSetTransition === true) {
+      setShowSetTransitionModal(true);
+      setViewingSet(1);
+    }
+  }, [game?.pendingSetTransition]);
 
   // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
   // ONLY applies to: niileg phase, first cycle (both Set 1 and Set 2)
@@ -235,10 +247,42 @@ export default function TeamGamePage() {
     shotIndex: number,
   ) => {
     try {
-      await editShot({ gameId, setIndex, phaseIndex, shooterIndex, shotIndex });
-    } catch (error) {
-      console.error("Failed to edit shot:", error);
+      const result = await editShot({ gameId, setIndex, phaseIndex, shooterIndex, shotIndex });
+
+      if (result?.pendingCleared) {
+        // Score dropped below 30, exit edit mode, game resumes normally
+        setIsInEditMode(false);
+        setShowSetTransitionModal(false);
+      } else if (result?.shouldShowTransitionModal) {
+        // Miss→hit edit, score still >= 30, re-show confirmation modal
+        setShowSetTransitionModal(true);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("30 оноо хязгаарлалт")) {
+        setShowScoreLimitError(true);
+      } else {
+        console.error("Failed to edit shot:", error);
+      }
     }
+  };
+
+  // Handle confirming set transition (Тийм)
+  const handleConfirmSetTransition = async () => {
+    try {
+      await confirmSetTransitionMutation({ gameId });
+      setShowSetTransitionModal(false);
+      setIsInEditMode(false);
+    } catch (error) {
+      console.error("Failed to confirm set transition:", error);
+    }
+  };
+
+  // Handle declining set transition (Үгүй) — enter edit mode
+  const handleDeclineSetTransition = () => {
+    setShowSetTransitionModal(false);
+    setIsInEditMode(true);
+    setViewingSet(1);
   };
 
   // Handle team name editing
@@ -345,18 +389,32 @@ export default function TeamGamePage() {
 
   return (
     <div className="min-h-screen pb-52">
-      {/* Set Toggle Button - portaled into AppShell header */}
-      {set2HasStarted &&
-        headerEl &&
+      {/* Header Portal Buttons */}
+      {headerEl &&
         createPortal(
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
-            className="text-xs"
-          >
-            {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
-          </Button>,
+          <>
+            {/* Set toggle when Set 2 started (and not in pending transition) */}
+            {set2HasStarted && !game.pendingSetTransition && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
+                className="text-xs"
+              >
+                {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
+              </Button>
+            )}
+            {/* Manual transition trigger in edit mode */}
+            {game.pendingSetTransition && isInEditMode && (
+              <Button
+                size="sm"
+                onClick={() => setShowSetTransitionModal(true)}
+                className="text-xs bg-amber-500 hover:bg-amber-600 text-white"
+              >
+                Дунд өрөг рүү
+              </Button>
+            )}
+          </>,
           headerEl,
         )}
       {/* Score Header */}
@@ -459,7 +517,7 @@ export default function TeamGamePage() {
       </div>
 
       {/* Game Controls */}
-      {!isFinished && currentShooter && (
+      {!isFinished && currentShooter && !game.pendingSetTransition && (
         <TeamGameControls
           currentShooterName={getCurrentShooterName()}
           currentTeam={currentShooter.team}
@@ -486,6 +544,9 @@ export default function TeamGamePage() {
           gameId={gameId}
           awayColor={awayColor}
           homeColor={homeColor}
+          sets={game.sets}
+          homeTeamPlayers={game.homeTeam.players}
+          awayTeamPlayers={game.awayTeam.players}
         />
       )}
 
@@ -704,6 +765,163 @@ export default function TeamGamePage() {
                 onClick={() => setSubstitutingTeam(null)}
               >
                 Болих
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Set Transition Confirmation Modal */}
+      <AnimatePresence>
+        {showSetTransitionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-center"
+            >
+              {/* App Icon */}
+              <div className="flex justify-center mb-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.2 }}
+                  className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center"
+                >
+                  <img
+                    src="/app_icon.svg"
+                    alt="Шагай Харваа"
+                    className="w-10 h-10"
+                  />
+                </motion.div>
+              </div>
+
+              <h2 className="text-xl font-bold mb-2">Эхэн өрөг дууслаа!</h2>
+              <p className="text-muted-foreground mb-4">
+                Дунд өрөг рүү үргэлжлүүлэх үү?
+              </p>
+
+              {/* Score Summary */}
+              {(() => {
+                const ac = getTeamColors(awayColor, "orange");
+                const hc = getTeamColors(homeColor, "blue");
+                const set1 = game.sets[0];
+                return (
+                  <div className="bg-gray-50 rounded-xl p-4 mb-5">
+                    {/* Team Names Row */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 text-center">
+                        <div className={`flex items-center justify-center gap-1.5`}>
+                          <div className={`w-7 h-7 rounded-full ${ac.bg100} flex items-center justify-center`}>
+                            <span className={`text-xs font-bold ${ac.text600}`}>
+                              {game.awayClanName?.charAt(0) ?? "Б"}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium truncate max-w-[80px]">
+                            {game.awayClanName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="px-3 text-xs text-muted-foreground font-medium">VS</div>
+                      <div className="flex-1 text-center">
+                        <div className={`flex items-center justify-center gap-1.5`}>
+                          <span className="text-sm font-medium truncate max-w-[80px]">
+                            {game.homeClanName}
+                          </span>
+                          <div className={`w-7 h-7 rounded-full ${hc.bg100} flex items-center justify-center`}>
+                            <span className={`text-xs font-bold ${hc.text600}`}>
+                              {game.homeClanName?.charAt(0) ?? "Б"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Score Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 text-center">
+                        <span className={`text-2xl font-bold ${ac.text500}`}>
+                          {Math.min(set1?.awayScore ?? 0, 15)}
+                        </span>
+                        {(set1?.awayScore ?? 0) > 15 && (
+                          <span className={`text-sm font-normal ${ac.text500} ml-0.5`}>
+                            (+{(set1?.awayScore ?? 0) - 15})
+                          </span>
+                        )}
+                      </div>
+                      <div className="px-3">
+                        <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded-full">
+                          Эхэн өрөг
+                        </span>
+                      </div>
+                      <div className="flex-1 text-center">
+                        <span className={`text-2xl font-bold ${hc.text500}`}>
+                          {Math.min(set1?.homeScore ?? 0, 15)}
+                        </span>
+                        {(set1?.homeScore ?? 0) > 15 && (
+                          <span className={`text-sm font-normal ${hc.text500} ml-0.5`}>
+                            (+{(set1?.homeScore ?? 0) - 15})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleDeclineSetTransition}
+                >
+                  Үгүй
+                </Button>
+                <Button
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                  onClick={handleConfirmSetTransition}
+                >
+                  Тийм
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Score Limit Error Modal */}
+      <AnimatePresence>
+        {showScoreLimitError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={() => setShowScoreLimitError(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-center"
+            >
+              <div className="text-red-500 text-lg font-bold mb-2">
+                Засах боломжгүй
+              </div>
+              <p className="text-muted-foreground mb-4">
+                Эхэн өрөгт 30 оноо хязгаарлалт байгаа тул засах боломжгүй
+              </p>
+              <Button
+                onClick={() => setShowScoreLimitError(false)}
+                className="w-full"
+              >
+                Ойлголоо
               </Button>
             </motion.div>
           </motion.div>

@@ -396,6 +396,7 @@ export const recordShot = mutation({
     const game = await ctx.db.get(args.gameId);
     if (!game) throw new Error("Game not found");
     if (game.status === "finished") throw new Error("Game is already finished");
+    if (game.pendingSetTransition) throw new Error("Game is waiting for set transition confirmation");
 
     // If game has a creator, only creator can record shots
     // If game has no creator (anonymous), anyone can record
@@ -449,56 +450,19 @@ export const recordShot = mutation({
       }
     }
 
-    // IMMEDIATE SET 1 END: Combined score reaches 30 → end set immediately
+    // PENDING SET 1 TRANSITION: Combined score reaches 30 → pause for confirmation
     if (game.currentSet === 1 &&
         currentSet.homeScore + currentSet.awayScore >= 30) {
-      // Mark phase as completed
-      currentPhase.isCompleted = true;
+      // Save the shot but don't advance game state or create Set 2
       phases[game.currentPhaseIndex] = currentPhase;
       currentSet.phases = phases;
-
-      // Calculate pulled points
-      if (currentSet.homeScore > 15) {
-        currentSet.homePulled = currentSet.homeScore - 15;
-        currentSet.awayPulled = 0;
-      } else if (currentSet.awayScore > 15) {
-        currentSet.awayPulled = currentSet.awayScore - 15;
-        currentSet.homePulled = 0;
-      } else if (currentSet.homeScore === 15 && currentSet.awayScore < 15) {
-        currentSet.homePulled = 15 - currentSet.awayScore;
-        currentSet.awayPulled = 0;
-      } else if (currentSet.awayScore === 15 && currentSet.homeScore < 15) {
-        currentSet.awayPulled = 15 - currentSet.homeScore;
-        currentSet.homePulled = 0;
-      } else {
-        currentSet.homePulled = 0;
-        currentSet.awayPulled = 0;
-      }
-
-      currentSet.winner = currentSet.homeScore >= currentSet.awayScore ? "home" : "away";
-      currentSet.isCompleted = true;
       sets[currentSetIndex] = currentSet;
-
-      // Create Set 2
-      const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1, 2);
-      sets.push({
-        setNumber: 2,
-        homeSide: "left",
-        awaySide: "right",
-        homeScore: 0,
-        awayScore: 0,
-        phases: [initialPhaseSet2],
-        isCompleted: false,
-      });
 
       await ctx.db.patch(args.gameId, {
         sets,
-        currentSet: 2,
-        currentPhaseIndex: 0,
-        currentShooterIndex: 0,
-        currentShotInTurn: 0,
+        pendingSetTransition: true,
       });
-      return { setEnded: true, newSet: 2 };
+      return { pendingSetTransition: true };
     }
 
     // Set 2 Early Win Detection
@@ -768,6 +732,16 @@ export const recordShot = mutation({
 
     // Handle set end
     if (setEnded) {
+      // Set 1: Don't auto-create Set 2, set pending flag instead
+      if (game.currentSet === 1) {
+        sets[currentSetIndex] = currentSet;
+        await ctx.db.patch(args.gameId, {
+          sets,
+          pendingSetTransition: true,
+        });
+        return { pendingSetTransition: true };
+      }
+
       currentSet.isCompleted = true;
 
       // Calculate pulled points
@@ -794,22 +768,11 @@ export const recordShot = mutation({
 
     sets[currentSetIndex] = currentSet;
 
-    // Check if we need to start Set 2 or end the game
+    // Check if we need to end the game (Set 2 only now, Set 1 uses pending transition)
     let newCurrentSet = game.currentSet;
     if (setEnded) {
       if (game.currentSet === 1) {
-        // Start Set 2
-        newCurrentSet = 2;
-        const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1, 2);
-        sets.push({
-          setNumber: 2,
-          homeSide: "left", // Teams swap sides
-          awaySide: "right",
-          homeScore: 0,
-          awayScore: 0,
-          phases: [initialPhaseSet2],
-          isCompleted: false,
-        });
+        // Should not reach here (handled above), but just in case
         nextPhaseIndex = 0;
         nextShooterIndex = 0;
         nextShotInTurn = 0;
@@ -882,6 +845,87 @@ export const recordShot = mutation({
     });
 
     return { setEnded, gameEnded };
+  },
+});
+
+// Confirm Set 1 → Set 2 transition (called when user clicks "Тийм" on confirmation modal)
+export const confirmSetTransition = mutation({
+  args: {
+    gameId: v.id("teamGames"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getOptionalAuthUser(ctx);
+    const game = await ctx.db.get(args.gameId);
+    if (!game) throw new Error("Game not found");
+    if (!game.pendingSetTransition) throw new Error("No pending set transition");
+    if (game.currentSet !== 1) throw new Error("Can only confirm Set 1 → Set 2 transition");
+
+    if (game.creatorId && (!user || game.creatorId !== user._id)) {
+      throw new Error("Only the game creator can confirm set transition");
+    }
+
+    const sets = [...game.sets];
+    const set1 = { ...sets[0] };
+
+    // Verify combined score is still >= 30
+    if (set1.homeScore + set1.awayScore < 30) {
+      await ctx.db.patch(args.gameId, { pendingSetTransition: undefined });
+      return { cancelled: true };
+    }
+
+    // Mark all phases as completed
+    const phases = [...set1.phases];
+    for (let i = 0; i < phases.length; i++) {
+      if (!phases[i].isCompleted) {
+        phases[i] = { ...phases[i], isCompleted: true };
+      }
+    }
+    set1.phases = phases;
+
+    // Calculate pulled points
+    if (set1.homeScore > 15) {
+      set1.homePulled = set1.homeScore - 15;
+      set1.awayPulled = 0;
+    } else if (set1.awayScore > 15) {
+      set1.awayPulled = set1.awayScore - 15;
+      set1.homePulled = 0;
+    } else if (set1.homeScore === 15 && set1.awayScore < 15) {
+      set1.homePulled = 15 - set1.awayScore;
+      set1.awayPulled = 0;
+    } else if (set1.awayScore === 15 && set1.homeScore < 15) {
+      set1.awayPulled = 15 - set1.homeScore;
+      set1.homePulled = 0;
+    } else {
+      set1.homePulled = 0;
+      set1.awayPulled = 0;
+    }
+
+    set1.winner = set1.homeScore >= set1.awayScore ? "home" : "away";
+    set1.isCompleted = true;
+    sets[0] = set1;
+
+    // Create Set 2
+    const initialPhaseSet2 = createInitialPhase(game.playersPerTeam, "niileg", 1, 1, 2);
+    sets.push({
+      setNumber: 2,
+      homeSide: "left",
+      awaySide: "right",
+      homeScore: 0,
+      awayScore: 0,
+      phases: [initialPhaseSet2],
+      isCompleted: false,
+    });
+
+    await ctx.db.patch(args.gameId, {
+      sets,
+      currentSet: 2,
+      currentPhaseIndex: 0,
+      currentShooterIndex: 0,
+      currentShotInTurn: 0,
+      pendingSetTransition: undefined,
+    });
+
+    return { confirmed: true, newSet: 2 };
   },
 });
 
@@ -1100,6 +1144,20 @@ export const editShot = mutation({
     // Toggle the shot
     const shots = [...targetShooter.shots];
     const wasHit = shots[args.shotIndex];
+
+    // Set 1 score cap validation: cannot edit miss→hit if combined would exceed 30
+    if (args.setIndex === 0 && !wasHit) {
+      const newHomeScore = targetShooter.team === "home"
+        ? targetSet.homeScore + 1
+        : targetSet.homeScore;
+      const newAwayScore = targetShooter.team === "away"
+        ? targetSet.awayScore + 1
+        : targetSet.awayScore;
+      if (newHomeScore + newAwayScore > 30) {
+        throw new Error("Эхэн өрөгт 30 оноо хязгаарлалт байгаа тул засах боломжгүй");
+      }
+    }
+
     shots[args.shotIndex] = !wasHit;
     targetShooter.shots = shots;
 
@@ -1151,8 +1209,25 @@ export const editShot = mutation({
 
     sets[args.setIndex] = targetSet;
 
-    await ctx.db.patch(args.gameId, { sets });
-    return { success: true };
+    // Manage pendingSetTransition flag for Set 1 edits
+    const newCombined = targetSet.homeScore + targetSet.awayScore;
+    let pendingUpdate: Record<string, boolean | undefined> = {};
+    if (args.setIndex === 0) {
+      if (game.pendingSetTransition && newCombined < 30) {
+        // Score dropped below 30, clear pending state → game resumes
+        pendingUpdate = { pendingSetTransition: undefined };
+      } else if (!game.pendingSetTransition && !wasHit && newCombined >= 30) {
+        // Miss→hit brought score back to 30+, re-activate pending
+        pendingUpdate = { pendingSetTransition: true };
+      }
+    }
+
+    await ctx.db.patch(args.gameId, { sets, ...pendingUpdate });
+
+    const pendingCleared = newCombined < 30 && game.pendingSetTransition === true;
+    const shouldShowTransitionModal = args.setIndex === 0 && !wasHit && newCombined >= 30;
+
+    return { success: true, newCombinedScore: newCombined, pendingCleared, shouldShowTransitionModal };
   },
 });
 

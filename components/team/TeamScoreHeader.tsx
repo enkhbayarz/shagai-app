@@ -133,9 +133,9 @@ export function TeamScoreHeader({
             animate={{ scale: 1 }}
             className={`text-4xl font-bold ${leftColors.text400} mt-2`}
           >
-            {leftScore - leftPulled}
-            {leftPulled > 0 && (
-              <span className="text-lg font-normal ml-0.5">(+{leftPulled})</span>
+            {Math.min(leftScore, 15)}
+            {leftScore > 15 && (
+              <span className="text-lg font-normal ml-0.5">(+{leftScore - 15})</span>
             )}
             <span className="text-lg text-gray-500">/15</span>
           </motion.div>
@@ -172,9 +172,9 @@ export function TeamScoreHeader({
             animate={{ scale: 1 }}
             className={`text-4xl font-bold ${rightColors.text400} mt-2`}
           >
-            {rightScore - rightPulled}
-            {rightPulled > 0 && (
-              <span className="text-lg font-normal ml-0.5">(+{rightPulled})</span>
+            {Math.min(rightScore, 15)}
+            {rightScore > 15 && (
+              <span className="text-lg font-normal ml-0.5">(+{rightScore - 15})</span>
             )}
             <span className="text-lg text-gray-500">/15</span>
           </motion.div>
