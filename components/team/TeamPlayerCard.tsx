@@ -77,8 +77,8 @@ export function TeamPlayerCard({
         </div>
       </button>
 
-      {/* Shot Indicators - Vertical Column */}
-      <div className="flex flex-col items-center gap-1">
+      {/* Shot Indicators - 2-Column Grid */}
+      <div className="grid grid-cols-2 gap-1 justify-items-center">
         {shots.map((shot, i) => {
           const isCurrentShot = isCurrentShooter && i === currentShotIndex;
           let bgClass = "bg-gray-300"; // unshot
