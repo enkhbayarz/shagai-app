@@ -454,20 +454,6 @@ export default function TeamGamePage() {
           className="mx-4 mb-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl p-4 text-center"
         >
           <div className="text-lg font-bold">ДҮҮЖИН</div>
-          {currentShooter && (
-            <div className="mt-2">
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  currentShooter.team === "home"
-                    ? "bg-blue-500/30 border border-blue-300/50"
-                    : "bg-orange-500/30 border border-orange-300/50"
-                }`}
-              >
-                {currentShooter.team === "home" ? "Эзэн" : "Зочин"} —{" "}
-                {getCurrentShooterName()}
-              </span>
-            </div>
-          )}
         </motion.div>
       )}
 

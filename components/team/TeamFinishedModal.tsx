@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Home, Share2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Home,
+  Share2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { type TeamColor, getTeamColors } from "@/lib/team-colors";
@@ -112,14 +119,20 @@ export function TeamFinishedModal({
                 transition={{ type: "spring", delay: 0.2 }}
                 className={`w-20 h-20 rounded-full flex items-center justify-center ${wc.bg100}`}
               >
-                <img src="/app_icon.svg" alt="Шагай Харваа" className="w-10 h-10" />
+                <img
+                  src="/app_icon.svg"
+                  alt="Шагай Харваа"
+                  className="w-10 h-10"
+                />
               </motion.div>
             </div>
 
             {/* Winner Announcement */}
-            <h2 className="text-2xl font-bold text-center mb-1">Тоглолт дууслаа!</h2>
+            <h2 className="text-2xl font-bold text-center mb-1">
+              Тоглолт дууслаа!
+            </h2>
             <p className={`text-center text-lg font-medium ${wc.text500} mb-4`}>
-              {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо!
+              {winnerName} баг хожлоо!
             </p>
 
             {/* Golden Point Badge */}
@@ -155,14 +168,18 @@ export function TeamFinishedModal({
                   <div className={`${ac.text600} font-bold`}>
                     {result.awaySet1Score - (result.awaySet1Pulled ?? 0)}
                     {(result.awaySet1Pulled ?? 0) > 0 && (
-                      <span className="text-xs font-normal ml-0.5">(+{result.awaySet1Pulled})</span>
+                      <span className="text-xs font-normal ml-0.5">
+                        (+{result.awaySet1Pulled})
+                      </span>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">Эхэн өрөг</div>
                   <div className={`${hc.text600} font-bold`}>
                     {result.homeSet1Score - (result.homeSet1Pulled ?? 0)}
                     {(result.homeSet1Pulled ?? 0) > 0 && (
-                      <span className="text-xs font-normal ml-0.5">(+{result.homeSet1Pulled})</span>
+                      <span className="text-xs font-normal ml-0.5">
+                        (+{result.homeSet1Pulled})
+                      </span>
                     )}
                   </div>
                 </div>
@@ -170,14 +187,18 @@ export function TeamFinishedModal({
                   <div className={`${ac.text600} font-bold`}>
                     {result.awaySet2Score - (result.awaySet2Pulled ?? 0)}
                     {(result.awaySet2Pulled ?? 0) > 0 && (
-                      <span className="text-xs font-normal ml-0.5">(+{result.awaySet2Pulled})</span>
+                      <span className="text-xs font-normal ml-0.5">
+                        (+{result.awaySet2Pulled})
+                      </span>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">Дунд өрөг</div>
                   <div className={`${hc.text600} font-bold`}>
                     {result.homeSet2Score - (result.homeSet2Pulled ?? 0)}
                     {(result.homeSet2Pulled ?? 0) > 0 && (
-                      <span className="text-xs font-normal ml-0.5">(+{result.homeSet2Pulled})</span>
+                      <span className="text-xs font-normal ml-0.5">
+                        (+{result.homeSet2Pulled})
+                      </span>
                     )}
                   </div>
                 </div>
@@ -195,7 +216,7 @@ export function TeamFinishedModal({
                     <button
                       onClick={() =>
                         setExpandedSet(
-                          expandedSet === set.setNumber ? null : set.setNumber
+                          expandedSet === set.setNumber ? null : set.setNumber,
                         )
                       }
                       className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors touch-manipulation"
@@ -227,36 +248,42 @@ export function TeamFinishedModal({
                         >
                           <div className="px-3 pb-3 space-y-3">
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {set.phases.map((phase: any, phaseIndex: number) => {
-                              const summary = computePhaseSummary(phase);
-                              return (
-                                <div key={phaseIndex}>
-                                  <div className="flex items-center justify-between text-xs mb-1 px-1">
-                                    <span className={`${ac.text600} font-medium`}>
-                                      {summary.awayHits}/{summary.awayTotal}
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                      {phaseTypeLabels[phase.phaseType] ||
-                                        phase.phaseType}{" "}
-                                      #{phase.cycle}
-                                    </span>
-                                    <span className={`${hc.text600} font-medium`}>
-                                      {summary.homeHits}/{summary.homeTotal}
-                                    </span>
+                            {set.phases.map(
+                              (phase: any, phaseIndex: number) => {
+                                const summary = computePhaseSummary(phase);
+                                return (
+                                  <div key={phaseIndex}>
+                                    <div className="flex items-center justify-between text-xs mb-1 px-1">
+                                      <span
+                                        className={`${ac.text600} font-medium`}
+                                      >
+                                        {summary.awayHits}/{summary.awayTotal}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {phaseTypeLabels[phase.phaseType] ||
+                                          phase.phaseType}{" "}
+                                        #{phase.cycle}
+                                      </span>
+                                      <span
+                                        className={`${hc.text600} font-medium`}
+                                      >
+                                        {summary.homeHits}/{summary.homeTotal}
+                                      </span>
+                                    </div>
+                                    <PhaseSection
+                                      phase={phase}
+                                      isActive={false}
+                                      currentShooterIndex={-1}
+                                      currentShotIndex={-1}
+                                      homeTeamPlayers={homeTeamPlayers}
+                                      awayTeamPlayers={awayTeamPlayers}
+                                      awayColor={awayColor}
+                                      homeColor={homeColor}
+                                    />
                                   </div>
-                                  <PhaseSection
-                                    phase={phase}
-                                    isActive={false}
-                                    currentShooterIndex={-1}
-                                    currentShotIndex={-1}
-                                    homeTeamPlayers={homeTeamPlayers}
-                                    awayTeamPlayers={awayTeamPlayers}
-                                    awayColor={awayColor}
-                                    homeColor={homeColor}
-                                  />
-                                </div>
-                              );
-                            })}
+                                );
+                              },
+                            )}
                           </div>
                         </motion.div>
                       )}
