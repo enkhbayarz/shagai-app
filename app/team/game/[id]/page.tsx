@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, X, Search, User, RefreshCw } from "lucide-react";
+import { X, Search, User, RefreshCw } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -334,42 +334,8 @@ export default function TeamGamePage() {
 
   return (
     <div className="min-h-screen pb-52">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b px-4 py-3"
-      >
-        <div className="flex items-center justify-between">
-          <Link href="/">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2 touch-manipulation"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <h1 className="font-display text-lg tracking-wider">БАГИЙН ХАРВАА</h1>
-          <div className="w-10" />
-        </div>
-        {/* Set Toggle Button - only show if Set 2 has started */}
-        {set2HasStarted && (
-          <div className="flex justify-center mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
-              className="text-xs"
-            >
-              {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
-            </Button>
-          </div>
-        )}
-      </motion.header>
-
       {/* Score Header */}
-      <div className="sticky top-14 z-10 bg-white px-4 py-4">
+      <div className="sticky top-0 z-10 bg-white px-4 py-4">
         <TeamScoreHeader
           homeClanName={game.homeClanName}
           homeClanTag={game.homeClanTag}
@@ -391,37 +357,17 @@ export default function TeamGamePage() {
           onEditTeamName={!isFinished ? handleEditTeamName : undefined}
         />
 
-        {/* Substitution Buttons */}
-        {!isFinished && (canSubstitute("home") || canSubstitute("away")) && (
-          <div className="flex justify-between mt-3 gap-2">
-            {/* Home team substitute button - left side */}
-            <div className="flex-1">
-              {canSubstitute("home") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
-                  onClick={() => setSubstitutingTeam("home")}
-                >
-                  <RefreshCw className="w-3 h-3 mr-1" />
-                  Солих ({getBenchPlayer("home")?.name})
-                </Button>
-              )}
-            </div>
-            {/* Away team substitute button - right side */}
-            <div className="flex-1">
-              {canSubstitute("away") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
-                  onClick={() => setSubstitutingTeam("away")}
-                >
-                  <RefreshCw className="w-3 h-3 mr-1" />
-                  Солих ({getBenchPlayer("away")?.name})
-                </Button>
-              )}
-            </div>
+        {/* Set Toggle Button - only show if Set 2 has started */}
+        {set2HasStarted && (
+          <div className="flex justify-center mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewingSet(viewingSet === 1 ? 2 : 1)}
+              className="text-xs"
+            >
+              {viewingSet === 1 ? "Дунд өрөг" : "Эхэн өрөг"} руу очих
+            </Button>
           </div>
         )}
       </div>
@@ -627,6 +573,34 @@ export default function TeamGamePage() {
                   Хадгалах
                 </Button>
               </div>
+
+              {/* Substitution Button */}
+              {editingPlayer &&
+                canSubstitute(editingPlayer.team) &&
+                !(
+                  (editingPlayer.team === "home"
+                    ? game.homeTeam.players
+                    : game.awayTeam.players
+                  )[editingPlayer.playerIndex]?.isSubstitute
+                ) && (
+                  <Button
+                    variant="outline"
+                    className={`w-full mt-3 text-xs gap-1 ${
+                      editingPlayer.team === "home"
+                        ? "border-orange-300 text-orange-700 hover:bg-orange-50"
+                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                    }`}
+                    size="sm"
+                    onClick={() => {
+                      const team = editingPlayer.team;
+                      handleCloseEditModal();
+                      setSubstitutingTeam(team);
+                    }}
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Солих (Сэлгээ) — {getBenchPlayer(editingPlayer.team)?.name}
+                  </Button>
+                )}
             </motion.div>
           </motion.div>
         )}
