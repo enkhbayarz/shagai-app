@@ -1,19 +1,101 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Trophy, ArrowLeft } from "lucide-react";
+import { Trophy, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { PhaseSection } from "@/components/team";
+
+const phaseTypeLabels: Record<string, string> = {
+  niileg: "НИЙЛЛЭГ ҮЕ",
+  shuvtraga: "ШУВТРАГА ҮЕ",
+  merge: "МЭРГЭ ҮЕ",
+};
+
+interface PlayerStats {
+  name: string;
+  isSubstitute: boolean;
+  set1: { hits: number; total: number };
+  set2: { hits: number; total: number };
+  overall: { hits: number; total: number };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function computePlayerStats(
+  sets: any[],
+  team: "home" | "away",
+  players: { name: string; isSubstitute: boolean }[]
+): PlayerStats[] {
+  return players.map((player, playerIndex) => {
+    const stats: PlayerStats = {
+      name: player.name,
+      isSubstitute: player.isSubstitute,
+      set1: { hits: 0, total: 0 },
+      set2: { hits: 0, total: 0 },
+      overall: { hits: 0, total: 0 },
+    };
+
+    sets.forEach((set) => {
+      const setKey = set.setNumber === 1 ? "set1" : "set2";
+      set.phases.forEach((phase: any) => {
+        phase.shooters.forEach((shooter: any) => {
+          if (shooter.team === team && shooter.playerIndex === playerIndex) {
+            shooter.shots.forEach((shot: boolean | "skip" | null) => {
+              if (shot === true) {
+                stats[setKey].hits++;
+                stats[setKey].total++;
+              } else if (shot === false) {
+                stats[setKey].total++;
+              }
+            });
+          }
+        });
+      });
+    });
+
+    stats.overall.hits = stats.set1.hits + stats.set2.hits;
+    stats.overall.total = stats.set1.total + stats.set2.total;
+    return stats;
+  });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function computePhaseSummary(phase: any) {
+  let homeHits = 0,
+    awayHits = 0,
+    homeTotal = 0,
+    awayTotal = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  phase.shooters.forEach((shooter: any) => {
+    shooter.shots.forEach((shot: boolean | "skip" | null) => {
+      if (shot === true) {
+        if (shooter.team === "home") {
+          homeHits++;
+          homeTotal++;
+        } else {
+          awayHits++;
+          awayTotal++;
+        }
+      } else if (shot === false) {
+        if (shooter.team === "home") homeTotal++;
+        else awayTotal++;
+      }
+    });
+  });
+  return { homeHits, awayHits, homeTotal, awayTotal };
+}
 
 export default function TeamSharePage() {
   const params = useParams();
   const gameId = params.id as Id<"teamGames">;
 
   const game = useQuery(api.teamGames.getPublic, { id: gameId });
+  const [expandedSet, setExpandedSet] = useState<number | null>(null);
 
   if (game === undefined) {
     return (
@@ -66,6 +148,17 @@ export default function TeamSharePage() {
   const winnerColor =
     result.winner === "home" ? "text-blue-500" : "text-orange-500";
 
+  const homePlayerStats = computePlayerStats(
+    game.sets,
+    "home",
+    game.homeTeam.players
+  );
+  const awayPlayerStats = computePlayerStats(
+    game.sets,
+    "away",
+    game.awayTeam.players
+  );
+
   return (
     <div className="min-h-screen px-4 py-6">
       {/* Header */}
@@ -104,7 +197,7 @@ export default function TeamSharePage() {
           </div>
           <h2 className="text-2xl font-bold">Тоглолт дууслаа!</h2>
           <p className={`text-lg font-medium ${winnerColor} mt-1`}>
-            [{winnerTag}] {winnerName} хожлоо!
+            {winnerTag ? `[${winnerTag}] ` : ""}{winnerName} хожлоо!
           </p>
           {result.wasGoldenPoint && (
             <span className="inline-block mt-2 bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
@@ -211,29 +304,119 @@ export default function TeamSharePage() {
           </div>
         </motion.div>
 
-        {/* Player Lists */}
+        {/* Set Details - Expandable */}
+        {game.sets.map((set, setIndex) => (
+          <motion.div
+            key={set.setNumber}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 + setIndex * 0.1 }}
+            className="bg-white rounded-2xl shadow-lg border mb-4 overflow-hidden"
+          >
+            <button
+              onClick={() =>
+                setExpandedSet(
+                  expandedSet === set.setNumber ? null : set.setNumber
+                )
+              }
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors touch-manipulation"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm">
+                  {set.setNumber === 1 ? "Эхэн өрөг" : "Дунд өрөг"} -
+                  Дэлгэрэнгүй
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  ({set.phases.length} үе)
+                </span>
+              </div>
+              {expandedSet === set.setNumber ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {expandedSet === set.setNumber && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-4 pb-4 space-y-3">
+                    {set.phases.map((phase, phaseIndex) => {
+                      const summary = computePhaseSummary(phase);
+                      return (
+                        <div key={phaseIndex}>
+                          <div className="flex items-center justify-between text-xs mb-1 px-1">
+                            <span className="text-orange-600 font-medium">
+                              {summary.awayHits}/{summary.awayTotal}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {phaseTypeLabels[phase.phaseType] ||
+                                phase.phaseType}{" "}
+                              #{phase.cycle}
+                            </span>
+                            <span className="text-blue-600 font-medium">
+                              {summary.homeHits}/{summary.homeTotal}
+                            </span>
+                          </div>
+                          <PhaseSection
+                            phase={phase as any}
+                            isActive={false}
+                            currentShooterIndex={-1}
+                            currentShotIndex={-1}
+                            homeTeamPlayers={game.homeTeam.players}
+                            awayTeamPlayers={game.awayTeam.players}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+
+        {/* Player Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="grid grid-cols-2 gap-4 mb-6"
         >
           {/* Away Players */}
           <div className="bg-orange-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-orange-700 mb-2">Баг 1</h3>
-            <div className="space-y-1">
-              {game.awayTeam.players
+            <h3 className="text-sm font-medium text-orange-700 mb-3">
+              {game.awayClanName}
+            </h3>
+            <div className="space-y-2">
+              {awayPlayerStats
                 .filter((p) => !p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-sm">
-                    {p.name}
+                  <div key={i}>
+                    <div className="text-sm truncate">{p.name}</div>
+                    <div className="text-xs font-mono text-orange-700/70">
+                      {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
+                      {p.overall.total})
+                    </div>
                   </div>
                 ))}
-              {game.awayTeam.players
+              {awayPlayerStats
                 .filter((p) => p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-xs text-muted-foreground">
-                    Сэлгээ: {p.name}
+                  <div key={`sub-${i}`}>
+                    <div className="text-xs text-muted-foreground truncate">
+                      Сэлгээ: {p.name}
+                    </div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
+                      {p.overall.total})
+                    </div>
                   </div>
                 ))}
             </div>
@@ -241,20 +424,32 @@ export default function TeamSharePage() {
 
           {/* Home Players */}
           <div className="bg-blue-50 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-blue-700 mb-2">Баг 2</h3>
-            <div className="space-y-1">
-              {game.homeTeam.players
+            <h3 className="text-sm font-medium text-blue-700 mb-3">
+              {game.homeClanName}
+            </h3>
+            <div className="space-y-2">
+              {homePlayerStats
                 .filter((p) => !p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-sm">
-                    {p.name}
+                  <div key={i}>
+                    <div className="text-sm truncate">{p.name}</div>
+                    <div className="text-xs font-mono text-blue-700/70">
+                      {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
+                      {p.overall.total})
+                    </div>
                   </div>
                 ))}
-              {game.homeTeam.players
+              {homePlayerStats
                 .filter((p) => p.isSubstitute)
                 .map((p, i) => (
-                  <div key={i} className="text-xs text-muted-foreground">
-                    Сэлгээ: {p.name}
+                  <div key={`sub-${i}`}>
+                    <div className="text-xs text-muted-foreground truncate">
+                      Сэлгээ: {p.name}
+                    </div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {p.set1.hits}+{p.set2.hits} ({p.overall.hits}/
+                      {p.overall.total})
+                    </div>
                   </div>
                 ))}
             </div>
