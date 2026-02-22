@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Copy, Check, Home, Share2 } from "lucide-react";
+import { Copy, Check, Home, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -96,7 +96,7 @@ export function TeamFinishedModal({
                   result.winner === "home" ? "bg-blue-100" : "bg-orange-100"
                 }`}
               >
-                <Trophy className={`w-10 h-10 ${winnerColor}`} />
+                <img src="/app_icon.svg" alt="Шагай Харваа" className="w-10 h-10" />
               </motion.div>
             </div>
 
@@ -138,28 +138,34 @@ export function TeamFinishedModal({
               {/* Set Scores */}
               <div className="mt-3 space-y-1">
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="text-orange-600 font-bold">{result.awaySet1Score}</div>
+                  <div className="text-orange-600 font-bold">
+                    {result.awaySet1Score - (result.awaySet1Pulled ?? 0)}
+                    {(result.awaySet1Pulled ?? 0) > 0 && (
+                      <span className="text-xs font-normal ml-0.5">(+{result.awaySet1Pulled})</span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">Эхэн өрөг</div>
-                  <div className="text-blue-600 font-bold">{result.homeSet1Score}</div>
+                  <div className="text-blue-600 font-bold">
+                    {result.homeSet1Score - (result.homeSet1Pulled ?? 0)}
+                    {(result.homeSet1Pulled ?? 0) > 0 && (
+                      <span className="text-xs font-normal ml-0.5">(+{result.homeSet1Pulled})</span>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="text-orange-600 font-bold">{result.awaySet2Score}</div>
+                  <div className="text-orange-600 font-bold">
+                    {result.awaySet2Score - (result.awaySet2Pulled ?? 0)}
+                    {(result.awaySet2Pulled ?? 0) > 0 && (
+                      <span className="text-xs font-normal ml-0.5">(+{result.awaySet2Pulled})</span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">Дунд өрөг</div>
-                  <div className="text-blue-600 font-bold">{result.homeSet2Score}</div>
-                </div>
-              </div>
-
-              {/* Pulled Points Per Set */}
-              <div className="mt-3 pt-3 border-t space-y-1">
-                <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="font-bold text-orange-600">+{result.awaySet1Pulled ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Эхэн өрөг таталт</div>
-                  <div className="font-bold text-blue-600">+{result.homeSet1Pulled ?? 0}</div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="font-bold text-orange-600">+{result.awaySet2Pulled ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Дунд өрөг таталт</div>
-                  <div className="font-bold text-blue-600">+{result.homeSet2Pulled ?? 0}</div>
+                  <div className="text-blue-600 font-bold">
+                    {result.homeSet2Score - (result.homeSet2Pulled ?? 0)}
+                    {(result.homeSet2Pulled ?? 0) > 0 && (
+                      <span className="text-xs font-normal ml-0.5">(+{result.homeSet2Pulled})</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

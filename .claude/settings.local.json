@@ -14,7 +14,9 @@
       "mcp__ide__getDiagnostics",
       "Bash(ls:*)",
       "Bash(npx tsc:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(xargs ls:*)",
+      "Bash(python3:*)"
     ]
   }
 }

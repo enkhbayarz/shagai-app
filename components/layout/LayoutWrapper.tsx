@@ -83,19 +83,7 @@ function LandingPage() {
 
       {/* Logo */}
       <div className="mb-12 text-center">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center">
-          <svg
-            className="w-14 h-14 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="6" />
-            <circle cx="12" cy="12" r="2" />
-          </svg>
-        </div>
+        <img src="/app_icon.svg" alt="Шагай Харваа" className="w-24 h-24 mx-auto mb-6 rounded-2xl" />
         <h1 className="font-display text-6xl md:text-7xl tracking-widest leading-none">
           ШАГАЙ
         </h1>

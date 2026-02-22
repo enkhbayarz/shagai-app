@@ -8,6 +8,10 @@ import { LayoutWrapper } from "@/components/layout";
 export const metadata: Metadata = {
   title: "Шагай Харваа",
   description: "Монгол үндэсний харваа бүртгэлийн систем",
+  icons: {
+    icon: "/app_icon.svg",
+    apple: "/app_icon.png",
+  },
 };
 
 export const viewport: Viewport = {

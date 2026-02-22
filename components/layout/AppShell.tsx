@@ -30,9 +30,7 @@ export function AppShell({ children, collapsed = false }: AppShellProps) {
               <Menu className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center">
-                <Target className="w-4 h-4 text-white" />
-              </div>
+              <img src="/app_icon.svg" alt="Шагай" className="w-6 h-6 rounded-md" />
               <span className="font-display text-lg tracking-wider">ШАГАЙ</span>
             </div>
           </div>
@@ -94,9 +92,7 @@ export function AppShell({ children, collapsed = false }: AppShellProps) {
             <aside className="absolute left-0 top-0 bottom-0 w-64 bg-background shadow-xl">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center">
-                    <Target className="w-4 h-4 text-white" />
-                  </div>
+                  <img src="/app_icon.svg" alt="Шагай" className="w-6 h-6 rounded-md" />
                   <span className="font-display tracking-wider">ШАГАЙ</span>
                 </div>
                 <button
