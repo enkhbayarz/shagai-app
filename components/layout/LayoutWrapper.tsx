@@ -62,25 +62,6 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
 function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 py-12">
-      {/* Auth Header */}
-      <div className="absolute top-4 right-4">
-        <div className="flex gap-2">
-          <SignInButton mode="modal">
-            <Button variant="outline" size="sm" className="touch-manipulation">
-              Нэвтрэх
-            </Button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-            <Button
-              size="sm"
-              className="bg-black text-white hover:bg-black/90 touch-manipulation"
-            >
-              Бүртгүүлэх
-            </Button>
-          </SignUpButton>
-        </div>
-      </div>
-
       {/* Logo */}
       <div className="mb-12 text-center">
         <img src="/app_icon.svg" alt="Шагай Харваа" className="w-24 h-24 mx-auto mb-6 rounded-2xl" />
