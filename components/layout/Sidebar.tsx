@@ -139,7 +139,7 @@ export function Sidebar({ showHeader = true, collapsed = false, onNavigate }: Si
       </nav>
 
       {/* Bottom Section - User Profile */}
-      <div className="mt-auto border-t pt-2 px-3 pb-3 relative">
+      <div className="mt-auto border-t pt-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] relative">
         <button
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent transition-colors"

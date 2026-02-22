@@ -418,7 +418,7 @@ export default function TeamGamePage() {
           headerEl,
         )}
       {/* Score Header */}
-      <div className="sticky top-0 z-10 bg-white px-4 py-4">
+      <div className="sticky top-[61px] lg:top-0 z-10 bg-white px-4 py-2">
         <TeamScoreHeader
           homeClanName={game.homeClanName}
           homeClanTag={game.homeClanTag}

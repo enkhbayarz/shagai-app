@@ -90,7 +90,7 @@ export function AppShell({ children, collapsed = false }: AppShellProps) {
               onClick={() => setSidebarOpen(false)}
               aria-hidden="true"
             />
-            <aside className="absolute left-0 top-0 bottom-0 w-64 bg-background shadow-xl">
+            <aside className="absolute left-0 top-0 bottom-0 w-64 bg-background shadow-xl pb-[env(safe-area-inset-bottom)]">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <div className="flex items-center gap-2">
                   <img src="/app_icon.svg" alt="Шагай" className="w-6 h-6 rounded-md" />
@@ -104,7 +104,7 @@ export function AppShell({ children, collapsed = false }: AppShellProps) {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="h-[calc(100vh-57px)]">
+              <div className="h-[calc(100dvh-57px)]">
                 <Sidebar showHeader={false} onNavigate={() => setSidebarOpen(false)} />
               </div>
             </aside>
