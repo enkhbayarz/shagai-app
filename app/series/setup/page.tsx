@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { User, Play, X } from "lucide-react";
+import { User, Play, X, Users, Target } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -19,26 +18,25 @@ interface PlayerEntry {
   userId?: Id<"users">;
 }
 
+// Custom color palette for each player slot
+const PLAYER_THEMES = [
+  { id: 1, light: "bg-blue-50", accent: "bg-blue-500", text: "text-blue-600", ring: "ring-blue-500" },
+  { id: 2, light: "bg-emerald-50", accent: "bg-emerald-500", text: "text-emerald-600", ring: "ring-emerald-500" },
+  { id: 3, light: "bg-amber-50", accent: "bg-amber-500", text: "text-amber-600", ring: "ring-amber-500" },
+  { id: 4, light: "bg-rose-50", accent: "bg-rose-500", text: "text-rose-600", ring: "ring-rose-500" },
+];
+
 export default function SetupPage() {
   const router = useRouter();
   const { user: clerkUser } = useUser();
 
   const [playerCount, setPlayerCount] = useState(2);
-  const [players, setPlayers] = useState<PlayerEntry[]>([
-    { name: "" },
-    { name: "" },
-    { name: "" },
-    { name: "" },
-  ]);
+  const [players, setPlayers] = useState<PlayerEntry[]>(Array(4).fill({ name: "" }));
   const [searchQuery, setSearchQuery] = useState("");
   const [activePlayerIndex, setActivePlayerIndex] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Convex queries and mutations
-  const currentUser = useQuery(
-    api.users.getMe,
-    clerkUser ? {} : "skip"
-  );
+  const currentUser = useQuery(api.users.getMe, clerkUser ? {} : "skip");
   const searchResults = useQuery(
     api.users.search,
     searchQuery.length >= 2 ? { query: searchQuery } : "skip"
@@ -46,7 +44,6 @@ export default function SetupPage() {
   const createGame = useMutation(api.games.create);
   const createUser = useMutation(api.users.createOrGetUser);
 
-  // Create user in Convex if doesn't exist (null means not found, undefined means loading)
   useEffect(() => {
     if (clerkUser && currentUser === null) {
       createUser({
@@ -57,13 +54,9 @@ export default function SetupPage() {
     }
   }, [clerkUser, currentUser, createUser]);
 
-  const handlePlayerCountChange = (count: number) => {
-    setPlayerCount(count);
-  };
-
   const handleNameChange = (index: number, name: string) => {
     const newPlayers = [...players];
-    newPlayers[index] = { name, userId: undefined };
+    newPlayers[index] = { ...newPlayers[index], name, userId: undefined };
     setPlayers(newPlayers);
   };
 
@@ -75,187 +68,161 @@ export default function SetupPage() {
     setSearchQuery("");
   };
 
-  const handleClearUser = (index: number) => {
-    const newPlayers = [...players];
-    newPlayers[index] = { name: "", userId: undefined };
-    setPlayers(newPlayers);
-  };
-
   const handleStart = async () => {
     if (isCreating) return;
     setIsCreating(true);
-
     try {
-      const gamePlayers = players.slice(0, playerCount).map((player, i) => ({
-        name: player.name || `Тоглогч ${i + 1}`,
-        userId: player.userId,
+      const gamePlayers = players.slice(0, playerCount).map((p, i) => ({
+        name: p.name || `Тоглогч ${i + 1}`,
+        userId: p.userId,
       }));
-
-      const gameId = await createGame({
-        playerCount,
-        players: gamePlayers,
-      });
-
+      const gameId = await createGame({ playerCount, players: gamePlayers });
       router.push(`/series/game/${gameId}`);
-    } catch (error) {
-      console.error("Failed to create game:", error);
+    } catch (e) {
+      console.error(e);
       setIsCreating(false);
     }
   };
 
-  const canStart = playerCount >= 1 && !isCreating;
-
   return (
-    <div className="min-h-screen px-4 py-6">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="font-display text-2xl tracking-wider text-center">ЦУВАА ХАРВАА</h1>
+    <div className="min-h-screen px-4 py-6 bg-[#f8fafc]">
+      <motion.header initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 pt-4">
+        <h1 className="font-display text-2xl tracking-[0.25em] text-center font-black text-slate-900 uppercase">ЦУВАА ХАРВАА</h1>
       </motion.header>
 
       <div className="max-w-md mx-auto space-y-6">
-        {/* Player Count Selection */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="glass">
-            <CardContent className="pt-6">
-              <h2 className="text-lg font-medium mb-4">Тоглогчдын тоо</h2>
-              <div className="grid grid-cols-4 gap-3">
-                {[1, 2, 3, 4].map((num) => (
-                  <Button
-                    key={num}
-                    variant={playerCount === num ? "default" : "outline"}
-                    className={`h-14 text-xl font-bold touch-manipulation transition-all ${
-                      playerCount === num
-                        ? "bg-black text-white ring-2 ring-amber-500"
-                        : "border-black/20 hover:bg-black/5"
-                    }`}
-                    onClick={() => handlePlayerCountChange(num)}
-                    aria-pressed={playerCount === num}
-                  >
-                    {num}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Segmented Slider Selection */}
+        <Card className="border-none shadow-sm bg-white/80 backdrop-blur-md">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-4 text-slate-600">
+              <Users className="w-4 h-4" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider">Харваачдын тоо</h2>
+            </div>
+            
+            <div className="relative flex p-1 bg-slate-100 rounded-xl">
+              {/* Sliding Background Indicator */}
+              <motion.div
+                className="absolute inset-y-1 bg-white rounded-lg shadow-sm"
+                initial={false}
+                animate={{
+                  width: `${100 / 4}%`,
+                  x: `${(playerCount - 1) * 100}%`,
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              />
+              {[1, 2, 3, 4].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPlayerCount(num)}
+                  className={`relative z-10 flex-1 py-3 text-lg font-bold transition-colors ${
+                    playerCount === num ? "text-black" : "text-slate-400"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Player Names */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="glass">
-            <CardContent className="pt-6 space-y-4">
-              <h2 className="text-lg font-medium mb-2">Тоглогчдын нэр</h2>
-              {Array.from({ length: playerCount }).map((_, index) => (
+        {/* Dynamic Slim Player Slots with Custom Colors */}
+        <div className="space-y-2">
+          <AnimatePresence mode="popLayout">
+            {players.slice(0, playerCount).map((player, index) => {
+              const theme = PLAYER_THEMES[index];
+              return (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                  className="space-y-2"
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  layout
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      players[index].userId ? "bg-emerald-100" : "bg-black/10"
-                    }`}>
-                      <User className={`w-5 h-5 ${
-                        players[index].userId ? "text-emerald-600" : "text-black/50"
-                      }`} />
-                    </div>
-                    <div className="flex-1 relative">
-                      <Input
-                        placeholder={`Тоглогч ${index + 1}…`}
-                        value={players[index].name}
-                        onChange={(e) => {
-                          handleNameChange(index, e.target.value);
-                          setSearchQuery(e.target.value);
-                        }}
-                        onFocus={() => setActivePlayerIndex(index)}
-                        className="h-12 pr-10"
-                        autoComplete="off"
-                      />
-                      {players[index].userId && (
-                        <button
-                          onClick={() => handleClearUser(index)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Search Results Dropdown */}
-                  {activePlayerIndex === index && searchResults && searchResults.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="ml-13 bg-white rounded-lg border shadow-lg overflow-hidden"
-                    >
-                      {searchResults.slice(0, 5).map((user) => (
-                        <button
-                          key={user._id}
-                          onClick={() => handleSelectUser(index, user)}
-                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b last:border-b-0"
-                        >
-                          <User className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">{user.fullName}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+                  <Card className={`overflow-hidden border-none shadow-sm transition-all duration-200 ${activePlayerIndex === index ? `ring-2 ${theme.ring}` : ""}`}>
+                    <CardContent className="p-0">
+                      <div className="flex items-center">
+                        {/* Themed Color Indicator */}
+                        <div className={`w-1.5 self-stretch ${theme.accent}`} />
+                        
+                        <div className="flex items-center gap-3 p-2 flex-1">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${player.userId ? theme.light : "bg-slate-50"}`}>
+                            <User className={`w-4 h-4 ${player.userId ? theme.text : "text-slate-300"}`} />
                           </div>
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
+                          
+                          <div className="flex-1">
+                            <Input
+                              placeholder={`Харваач ${index + 1}-ийн нэр`}
+                              value={player.name}
+                              maxLength={30}
+                              onChange={(e) => handleNameChange(index, e.target.value)}
+                              onFocus={() => setActivePlayerIndex(index)}
+                              enterKeyHint={index === playerCount - 1 ? "done" : "next"} // Dynamic keyboard button
+                              className="border-none bg-transparent p-0 text-lg font-medium focus-visible:ring-0 placeholder:text-slate-300"
+                              autoComplete="off"
+                            />
+                          </div>
 
-                  {/* Scouting card for selected registered user */}
-                  {players[index].userId && (
-                    <ScoutingCard
-                      userId={players[index].userId!}
-                      currentUserId={currentUser?._id}
-                    />
-                  )}
+                          {player.name && (
+                            <button 
+                              onClick={() => handleNameChange(index, "")} 
+                              className="p-3 -mr-2 hover:bg-slate-50 rounded-full transition-colors">
+                              <X className="w-4 h-4 text-slate-300" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Search Results Dropdown */}
+                      <AnimatePresence>
+                        {activePlayerIndex === index && searchQuery.length >= 2 && searchResults && (
+                          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="bg-white border-t overflow-hidden">
+                            {searchResults.slice(0, 2).map((u) => (
+                              <button
+                                key={u._id}
+                                onClick={() => handleSelectUser(index, u)}
+                                className="w-full px-4 py-2 flex items-center gap-3 hover:bg-slate-50 border-b last:border-0"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <User className="w-3 h-3 text-slate-400" />
+                                </div>
+                                <div className="text-left leading-tight">
+                                  <p className="text-[11px] font-bold text-slate-800">{u.fullName}</p>
+                                  <p className="text-[9px] text-slate-400">@{u.username}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {player.userId && (
+                        <div className="bg-slate-50/50 border-t">
+                          <ScoutingCard userId={player.userId} currentUserId={currentUser?._id} />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </motion.div>
-              ))}
+              );
+            })}
+          </AnimatePresence>
+        </div>
 
-              <p className="text-xs text-muted-foreground mt-2">
-                Бүртгэлтэй хэрэглэгч олохын тулд нэр бичнэ үү
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Start Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        {/* Start Button Area */}
+        <div className="pt-4 space-y-4">
           <Button
             onClick={handleStart}
-            disabled={!canStart}
-            className="w-full h-14 text-lg font-bold gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
+            disabled={isCreating}
+            className="w-full h-14 text-base font-black bg-slate-900 text-white hover:bg-black rounded-xl shadow-lg active:scale-[0.97] transition-all"
           >
-            {isCreating ? (
-              "Үүсгэж байна…"
-            ) : (
-              <>
-                <Play className="w-5 h-5" />
+            {isCreating ? "ҮҮСГЭЖ БАЙНА..." : (
+              <div className="flex items-center gap-3">
+                <Play className="w-4 h-4 fill-current" />
                 ЭХЛЭХ
-              </>
+              </div>
             )}
           </Button>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

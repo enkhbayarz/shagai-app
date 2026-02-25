@@ -1,4 +1,4 @@
-const domain = process.env.CLERK_JWT_ISSUER_DOMAIN;
+const domain = process.env.CLERK_JWT_ISSUER_DOMAIN || "https://enough-perch-65.clerk.accounts.dev";
 
 if (!domain) {
   console.warn(
@@ -10,7 +10,7 @@ if (!domain) {
 export default {
   providers: [
     {
-      domain,
+      domain: domain,
       applicationID: "convex",
     },
   ],
