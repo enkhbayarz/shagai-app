@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as archives from "../archives.js";
 import type * as auth from "../auth.js";
 import type * as backfill from "../backfill.js";
 import type * as dashboard from "../dashboard.js";
@@ -27,6 +28,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  archives: typeof archives;
   auth: typeof auth;
   backfill: typeof backfill;
   dashboard: typeof dashboard;

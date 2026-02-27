@@ -15,6 +15,7 @@ import {
   User,
   LogOut,
   MoreVertical,
+  HistoryIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignOutButton, useUser } from "@clerk/nextjs";
@@ -27,6 +28,7 @@ const navItems = [
   { icon: Users, label: "Баг", href: "/teams" },
   { icon: History, label: "Түүх", href: "/history" },
   { icon: Shield, label: "Админ", href: "/admin" },
+  { icon: History, label: "Архив", href: "/archive" },
 ];
 
 interface SidebarProps {
