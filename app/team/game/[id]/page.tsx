@@ -481,7 +481,7 @@ export default function TeamGamePage() {
                   homeTeamPlayers={game.homeTeam.players}
                   awayTeamPlayers={game.awayTeam.players}
                   onEditShot={
-                    !isFinished
+                    !isFinished && (viewingSet === game.currentSet || isInEditMode)
                       ? (shooterIndex, shotIndex) =>
                           handleEditShot(
                             viewingSet - 1,

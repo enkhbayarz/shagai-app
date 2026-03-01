@@ -423,6 +423,12 @@ export const recordShot = mutation({
     // Record the shot (or skip)
     // In rotation mode, currentShotInTurn represents the "round" (which shot slot we're filling)
     const shots = [...currentShooter.shots];
+
+    // Safety guard: prevent overwriting an already-recorded shot
+    if (shots[game.currentShotInTurn] !== null) {
+      throw new Error("Shot slot is already recorded. Game state may be out of sync.");
+    }
+
     if (args.isSkip) {
       shots[game.currentShotInTurn] = "skip";
     } else {
@@ -1115,6 +1121,11 @@ export const editShot = mutation({
       throw new Error("Only the game creator can edit shots");
     }
 
+    // Prevent editing Set 1 after Set 2 has started (unless in pending transition state)
+    if (args.setIndex === 0 && game.currentSet === 2 && !game.pendingSetTransition) {
+      throw new Error("Эхэн өрөгийг дунд өрөг эхэлсний дараа засах боломжгүй");
+    }
+
     // Bounds validation
     if (args.setIndex < 0 || args.setIndex >= game.sets.length) {
       throw new Error(`Invalid setIndex: ${args.setIndex}. Valid range: 0-${game.sets.length - 1}`);
@@ -1211,11 +1222,60 @@ export const editShot = mutation({
 
     // Manage pendingSetTransition flag for Set 1 edits
     const newCombined = targetSet.homeScore + targetSet.awayScore;
-    let pendingUpdate: Record<string, boolean | undefined> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let pendingUpdate: Record<string, any> = {};
     if (args.setIndex === 0) {
       if (game.pendingSetTransition && newCombined < 30) {
         // Score dropped below 30, clear pending state → game resumes
-        pendingUpdate = { pendingSetTransition: undefined };
+        // Advance game state past the last recorded shot so the next
+        // recordShot doesn't overwrite it
+        const resumePhase = sets[0].phases[game.currentPhaseIndex];
+
+        let nextShooterIndex = game.currentShooterIndex + 1;
+        let nextShotInTurn = game.currentShotInTurn;
+        let nextPhaseIndex = game.currentPhaseIndex;
+
+        if (nextShooterIndex >= resumePhase.shooters.length) {
+          nextShooterIndex = 0;
+          nextShotInTurn += 1;
+
+          if (nextShotInTurn >= 4) {
+            // Phase complete, mark it and create next phase
+            nextShotInTurn = 0;
+            sets[0].phases[game.currentPhaseIndex] = {
+              ...sets[0].phases[game.currentPhaseIndex],
+              isCompleted: true,
+            };
+
+            const phaseTypes = getPhasesForPlayerCount(game.playersPerTeam);
+            const currentPhaseTypeIndex = phaseTypes.indexOf(
+              resumePhase.phaseType as PhaseType
+            );
+            const nextPhaseTypeIndex = (currentPhaseTypeIndex + 1) % phaseTypes.length;
+            const nextCycle = nextPhaseTypeIndex === 0
+              ? resumePhase.cycle + 1
+              : resumePhase.cycle;
+            const nextPhaseType = phaseTypes[nextPhaseTypeIndex];
+            const nextPhaseNumber = sets[0].phases.length + 1;
+
+            const newPhase = createInitialPhase(
+              game.playersPerTeam,
+              nextPhaseType,
+              nextPhaseNumber,
+              nextCycle,
+              1
+            );
+            sets[0].phases.push(newPhase);
+            nextPhaseIndex = sets[0].phases.length - 1;
+          }
+        }
+
+        pendingUpdate = {
+          pendingSetTransition: undefined,
+          currentShooterIndex: nextShooterIndex,
+          currentShotInTurn: nextShotInTurn,
+          currentPhaseIndex: nextPhaseIndex,
+        };
       } else if (!game.pendingSetTransition && !wasHit && newCombined >= 30) {
         // Miss→hit brought score back to 30+, re-activate pending
         pendingUpdate = { pendingSetTransition: true };
