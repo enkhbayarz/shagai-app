@@ -31,7 +31,7 @@ const HOME_PREDEFINED = ["Тулга", "Зоригт", "Эрдэнэ", "Баяр
 export default function TeamSetupPage() {
   const router = useRouter();
   const MAX_PLAYERS = 8;
-  const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6 | 7 | 8>(6);
+  const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6>(6);
   const [homeTeamName] = useState("Баг 2");
   const [awayTeamName] = useState("Баг 1");
   const [awayTeamColor] = useState<TeamColor>("orange");
@@ -107,9 +107,8 @@ export default function TeamSetupPage() {
     { label: "Мэргэ үе", indices: [4, 5] },
   ];
 
-  // Bench indices are only relevant for 7 and 8
-  const showBench = playersPerTeam >= 7;
-  const benchIndices = showBench ? (playersPerTeam === 7 ? [6] : [6, 7]) : [];
+  const showBench = false;
+  const benchIndices: number[] = [];
 
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
@@ -124,7 +123,7 @@ export default function TeamSetupPage() {
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center py-2">
-            {([8, 7, 6, 5, 4, 3] as const).map((num) => (
+            {([6, 5, 4, 3] as const).map((num) => (
               <Button 
                 key={num} 
                 variant={playersPerTeam === num ? "default" : "outline"} 
