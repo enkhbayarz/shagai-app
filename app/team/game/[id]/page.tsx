@@ -503,7 +503,7 @@ export default function TeamGamePage() {
       </div>
 
       {/* Game Controls */}
-      {!isFinished && currentShooter && !game.pendingSetTransition && (
+      {!isFinished && currentShooter && !game.pendingSetTransition && viewingSet === game.currentSet && (
         <TeamGameControls
           currentShooterName={getCurrentShooterName()}
           currentTeam={currentShooter.team}

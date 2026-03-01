@@ -1,250 +1,731 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Play, User, GripVertical, X, Edit2 } from "lucide-react";
-import { useMutation } from "convex/react";
+import { Play, Edit2, Users, User } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { type TeamColor, getTeamColors } from "@/lib/team-colors";
-
-import { 
-  DndContext, 
-  DragOverlay, 
-  useDraggable, 
-  useDroppable, 
-  DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors
-} from "@dnd-kit/core";
+import { type TeamColor, TEAM_COLOR_OPTIONS, getTeamColors, teamColorMap } from "@/lib/team-colors";
 
 interface TeamPlayer {
   name: string;
+  isEditing: boolean;
+  userId?: Id<"users"> | null;
 }
-
-const AWAY_PREDEFINED = ["Бат", "Дорж", "Пүрэв", "Ганбаатар", "Лхагва", "Сүхээ", "Чинзо", "Даваа"];
-const HOME_PREDEFINED = ["Тулга", "Зоригт", "Эрдэнэ", "Баяр", "Чингүүн", "Мөнх", "Төрөө", "Болд"];
 
 export default function TeamSetupPage() {
   const router = useRouter();
-  const MAX_PLAYERS = 8;
+
+  // Game settings
   const [playersPerTeam, setPlayersPerTeam] = useState<3 | 4 | 5 | 6>(6);
-  const [homeTeamName] = useState("Баг 2");
-  const [awayTeamName] = useState("Баг 1");
-  const [awayTeamColor] = useState<TeamColor>("orange");
-  const [homeTeamColor] = useState<TeamColor>("blue");
+  const [homeTeamName, setHomeTeamName] = useState("Баг 2");
+  const [awayTeamName, setAwayTeamName] = useState("Баг 1");
+  const [awayTeamColor, setAwayTeamColor] = useState<TeamColor>("orange");
+  const [homeTeamColor, setHomeTeamColor] = useState<TeamColor>("blue");
+  const [awayColorOpen, setAwayColorOpen] = useState(false);
+  const [homeColorOpen, setHomeColorOpen] = useState(false);
+  const [isEditingHomeName, setIsEditingHomeName] = useState(false);
+  const [isEditingAwayName, setIsEditingAwayName] = useState(false);
+
+  // Team search state
+  const [selectedHomeClanId, setSelectedHomeClanId] =
+    useState<Id<"clans"> | null>(null);
+  const [selectedAwayClanId, setSelectedAwayClanId] =
+    useState<Id<"clans"> | null>(null);
+
+  // Player search state - track which player is being edited
+  const [activeHomePlayerIndex, setActiveHomePlayerIndex] = useState<
+    number | null
+  >(null);
+  const [activeAwayPlayerIndex, setActiveAwayPlayerIndex] = useState<
+    number | null
+  >(null);
+
+  // Generate default player names
+  const generatePlayers = (count: number): TeamPlayer[] =>
+    Array.from({ length: count }, (_, i) => ({
+      name: `Тоглогч ${i + 1}`,
+      isEditing: false,
+      userId: null,
+    }));
+
+  const [homePlayers, setHomePlayers] = useState<TeamPlayer[]>(
+    generatePlayers(6),
+  );
+  const [awayPlayers, setAwayPlayers] = useState<TeamPlayer[]>(
+    generatePlayers(6),
+  );
+  // Bench players (one per team)
+  const [homeBenchPlayer, setHomeBenchPlayer] = useState<TeamPlayer>({
+    name: "Сэлгээ",
+    isEditing: false,
+    userId: null,
+  });
+  const [awayBenchPlayer, setAwayBenchPlayer] = useState<TeamPlayer>({
+    name: "Сэлгээ",
+    isEditing: false,
+    userId: null,
+  });
   const [isCreating, setIsCreating] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-
-  const generatePlayers = () => Array.from({ length: MAX_PLAYERS }, () => ({ name: "" }));
-
-  const [homePlayers, setHomePlayers] = useState<TeamPlayer[]>(generatePlayers());
-  const [awayPlayers, setAwayPlayers] = useState<TeamPlayer[]>(generatePlayers());
 
   const createTeamGame = useMutation(api.teamGames.create);
 
-  const isAssigned = (name: string) => {
-    if (!name) return false;
-    return [...homePlayers, ...awayPlayers].some(p => p.name.trim().toLowerCase() === name.trim().toLowerCase());
+  // Team search queries (triggered when editing and 2+ chars)
+  const homeSearchResults = useQuery(
+    api.teams.search,
+    isEditingHomeName && homeTeamName.length >= 2
+      ? { query: homeTeamName }
+      : "skip",
+  );
+  const awaySearchResults = useQuery(
+    api.teams.search,
+    isEditingAwayName && awayTeamName.length >= 2
+      ? { query: awayTeamName }
+      : "skip",
+  );
+
+  // Player search queries - use existing api.users.search
+  const homePlayerSearchQuery =
+    activeHomePlayerIndex !== null
+      ? (homePlayers[activeHomePlayerIndex]?.name ?? "")
+      : "";
+  const awayPlayerSearchQuery =
+    activeAwayPlayerIndex !== null
+      ? (awayPlayers[activeAwayPlayerIndex]?.name ?? "")
+      : "";
+
+  const homePlayerSearchResults = useQuery(
+    api.users.search,
+    activeHomePlayerIndex !== null && homePlayerSearchQuery.length >= 2
+      ? { query: homePlayerSearchQuery }
+      : "skip",
+  );
+  const awayPlayerSearchResults = useQuery(
+    api.users.search,
+    activeAwayPlayerIndex !== null && awayPlayerSearchQuery.length >= 2
+      ? { query: awayPlayerSearchQuery }
+      : "skip",
+  );
+
+  // Handle team selection from search
+  const handleSelectHomeTeam = (team: {
+    _id: Id<"clans">;
+    name: string;
+    tag: string;
+  }) => {
+    setHomeTeamName(team.name);
+    setSelectedHomeClanId(team._id);
+    setIsEditingHomeName(false);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over) return;
-
-    const playerName = active.id as string;
-    const [team, indexStr] = (over.id as string).split("-");
-    const index = parseInt(indexStr);
-
-    const setter = team === "home" ? setHomePlayers : setAwayPlayers;
-    const current = team === "home" ? homePlayers : awayPlayers;
-    
-    const updated = [...current];
-    updated[index] = { name: playerName };
-    setter(updated);
+  const handleSelectAwayTeam = (team: {
+    _id: Id<"clans">;
+    name: string;
+    tag: string;
+  }) => {
+    setAwayTeamName(team.name);
+    setSelectedAwayClanId(team._id);
+    setIsEditingAwayName(false);
   };
 
-  const handleManualEdit = (team: "home" | "away", index: number, value: string) => {
-    const setter = team === "home" ? setHomePlayers : setAwayPlayers;
-    const updated = [...(team === "home" ? homePlayers : awayPlayers)];
-    updated[index] = { name: value };
-    setter(updated);
+  // Handle player selection from search
+  const handleSelectHomePlayer = (
+    index: number,
+    user: { _id: Id<"users">; fullName?: string | null },
+  ) => {
+    const updated = [...homePlayers];
+    updated[index] = {
+      ...updated[index],
+      name: user.fullName || "Unknown",
+      userId: user._id,
+      isEditing: false,
+    };
+    setHomePlayers(updated);
+    setActiveHomePlayerIndex(null);
   };
 
+  const handleSelectAwayPlayer = (
+    index: number,
+    user: { _id: Id<"users">; fullName?: string | null },
+  ) => {
+    const updated = [...awayPlayers];
+    updated[index] = {
+      ...updated[index],
+      name: user.fullName || "Unknown",
+      userId: user._id,
+      isEditing: false,
+    };
+    setAwayPlayers(updated);
+    setActiveAwayPlayerIndex(null);
+  };
+
+  // Handle player count change
+  const handlePlayerCountChange = (count: 3 | 4 | 5 | 6) => {
+    setPlayersPerTeam(count);
+    setHomePlayers(generatePlayers(count));
+    setAwayPlayers(generatePlayers(count));
+  };
+
+  // Handle player name edit
+  const handlePlayerNameChange = (
+    team: "home" | "away",
+    index: number,
+    name: string,
+  ) => {
+    if (team === "home") {
+      const updated = [...homePlayers];
+      updated[index] = { ...updated[index], name };
+      setHomePlayers(updated);
+    } else {
+      const updated = [...awayPlayers];
+      updated[index] = { ...updated[index], name };
+      setAwayPlayers(updated);
+    }
+  };
+
+  // Toggle player edit mode
+  const togglePlayerEdit = (team: "home" | "away", index: number) => {
+    if (team === "home") {
+      const updated = [...homePlayers];
+      updated[index] = {
+        ...updated[index],
+        isEditing: !updated[index].isEditing,
+      };
+      setHomePlayers(updated);
+    } else {
+      const updated = [...awayPlayers];
+      updated[index] = {
+        ...updated[index],
+        isEditing: !updated[index].isEditing,
+      };
+      setAwayPlayers(updated);
+    }
+  };
+
+  // Start game - always available!
   const handleStart = async () => {
     if (isCreating) return;
     setIsCreating(true);
+
     try {
+      // Build player arrays with bench player at the end (isSubstitute: true)
+      const homeTeamPlayersWithBench = [
+        ...homePlayers.map((p) => ({
+          name: p.name,
+          userId: p.userId ?? undefined,
+          isSubstitute: false,
+        })),
+        {
+          name: homeBenchPlayer.name,
+          userId: homeBenchPlayer.userId ?? undefined,
+          isSubstitute: true,
+        },
+      ];
+
+      const awayTeamPlayersWithBench = [
+        ...awayPlayers.map((p) => ({
+          name: p.name,
+          userId: p.userId ?? undefined,
+          isSubstitute: false,
+        })),
+        {
+          name: awayBenchPlayer.name,
+          userId: awayBenchPlayer.userId ?? undefined,
+          isSubstitute: true,
+        },
+      ];
+
       const gameId = await createTeamGame({
         playersPerTeam,
         homeTeamName,
         awayTeamName,
-        homeTeamPlayers: homePlayers.slice(0, playersPerTeam).map((p, i) => ({ name: p.name || `Харваач ${i + 1}`, isSubstitute: false })),
-        awayTeamPlayers: awayPlayers.slice(0, playersPerTeam).map((p, i) => ({ name: p.name || `Харваач ${i + 1}`, isSubstitute: false })),
-        homeTeamColor,
-        awayTeamColor,
+        homeClanId: selectedHomeClanId ?? undefined,
+        awayClanId: selectedAwayClanId ?? undefined,
+        homeTeamPlayers: homeTeamPlayersWithBench,
+        awayTeamPlayers: awayTeamPlayersWithBench,
+        homeTeamColor: homeTeamColor,
+        awayTeamColor: awayTeamColor,
       });
+
       router.push(`/team/game/${gameId}`);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to create team game:", error);
       setIsCreating(false);
     }
   };
 
-  const ac = getTeamColors(awayTeamColor, "orange");
-  const hc = getTeamColors(homeTeamColor, "blue");
-
-  // Traditional Rounds
-  const rounds = [
-    { label: "Нийллэг үе", indices: [0, 1] },
-    { label: "Шувтарга үе", indices: [2, 3] },
-    { label: "Мэргэ үе", indices: [4, 5] },
-  ];
-
-  const showBench = false;
-  const benchIndices: number[] = [];
+  const ac = getTeamColors(awayTeamColor, "orange"); // away colors
+  const hc = getTeamColors(homeTeamColor, "blue");   // home colors
 
   return (
-    <DndContext sensors={sensors} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
-      <div className="min-h-screen px-4 py-6 bg-slate-50/50">
-        <h1 className="font-display text-2xl tracking-wider text-center font-bold uppercase mb-6">Багийн Тохиргоо</h1>
+    <div className="min-h-screen px-4 py-6">
+      {/* Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6"
+      >
+        <h1 className="font-display text-2xl tracking-wider text-center">
+          БАГИЙН ХАРВАА
+        </h1>
+      </motion.header>
 
-        <div className="max-w-2xl mx-auto space-y-6">
-          
-          <div className="grid grid-cols-2 gap-4">
-            <PlayerPool title={awayTeamName} players={AWAY_PREDEFINED} colorSet={ac} isAssigned={isAssigned} />
-            <PlayerPool title={homeTeamName} players={HOME_PREDEFINED} colorSet={hc} isAssigned={isAssigned} />
-          </div>
+      <div className="max-w-lg mx-auto space-y-4">
+        {/* Player Count Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex gap-2 justify-center"
+        >
+          {([6, 5, 4, 3] as const).map((num) => (
+            <Button
+              key={num}
+              variant={playersPerTeam === num ? "default" : "outline"}
+              className={`h-9 px-4 text-sm font-bold touch-manipulation transition-all ${
+                playersPerTeam === num
+                  ? "bg-black text-white ring-2 ring-amber-500"
+                  : "border-black/20 hover:bg-black/5"
+              }`}
+              onClick={() => handlePlayerCountChange(num)}
+            >
+              {num}v{num}
+            </Button>
+          ))}
+        </motion.div>
 
-          <div className="flex flex-wrap gap-2 justify-center py-2">
-            {([6, 5, 4, 3] as const).map((num) => (
-              <Button 
-                key={num} 
-                variant={playersPerTeam === num ? "default" : "outline"} 
-                className={`h-9 px-4 text-xs font-bold transition-all ${playersPerTeam === num ? "bg-black text-white scale-105" : ""}`}
-                onClick={() => setPlayersPerTeam(num)}
-              >
-                {num}v{num}
-              </Button>
-            ))}
-          </div>
-
-          <div className="space-y-6 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-            {/* MAIN ROUNDS (0-5) */}
-            {rounds.map((round) => {
-              const visibleIndices = round.indices.filter(idx => idx < Math.min(playersPerTeam, 6));
-              if (visibleIndices.length === 0) return null;
-              return (
-                <div key={round.label} className="space-y-4">
-                  <RoundSeparator label={round.label} />
-                  <div className="grid grid-cols-2 gap-4">
-                    {visibleIndices.map((idx) => (
-                      <div key={idx} className="contents">
-                        <DroppableInput id={`away-${idx}`} value={awayPlayers[idx].name} colorSet={ac} onChange={(v: string) => handleManualEdit("away", idx, v)} onClear={() => handleManualEdit("away", idx, "")} />
-                        <DroppableInput id={`home-${idx}`} value={homePlayers[idx].name} colorSet={hc} onChange={(v: string) => handleManualEdit("home", idx, v)} onClear={() => handleManualEdit("home", idx, "")} />
-                      </div>
-                    ))}
+        {/* Teams */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-2 gap-3"
+        >
+          {/* Away Team (Left) */}
+          <Card className={`glass ${ac.border200}`}>
+            <CardContent className="py-4">
+              {/* Team Name */}
+              <div className="relative mb-3">
+                <div className="flex items-center justify-center gap-1">
+                  {/* Tappable badge with radial color picker */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setAwayColorOpen(!awayColorOpen)}
+                      className={`w-6 h-6 rounded-full ${ac.bg500} text-white flex items-center justify-center text-xs font-bold touch-manipulation transition-transform ${awayColorOpen ? "scale-110" : ""}`}
+                    >
+                      1
+                    </button>
+                    <AnimatePresence>
+                      {awayColorOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setAwayColorOpen(false)} />
+                          {TEAM_COLOR_OPTIONS.map((color, i) => {
+                            const angle = Math.PI - (Math.PI / (TEAM_COLOR_OPTIONS.length - 1)) * i;
+                            const radius = 56;
+                            const x = radius * Math.cos(angle);
+                            const y = radius * Math.sin(angle);
+                            const isSelected = awayTeamColor === color;
+                            const isTaken = color === homeTeamColor;
+                            return (
+                              <motion.button
+                                key={color}
+                                initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                animate={{ scale: isTaken ? 0.6 : 1, x, y: -y, opacity: isTaken ? 0.3 : 1 }}
+                                exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                transition={{ delay: i * 0.025, type: "spring", stiffness: 500, damping: 25 }}
+                                disabled={isTaken}
+                                onClick={(e) => { e.stopPropagation(); if (!isTaken) { setAwayTeamColor(color); setAwayColorOpen(false); } }}
+                                className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full shadow-lg touch-manipulation ${isTaken ? "cursor-not-allowed" : ""} ${isSelected ? "ring-[3px] ring-white ring-offset-2" : "border-2 border-white/50"}`}
+                                style={{ backgroundColor: teamColorMap[color].hex }}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
+                  {isEditingAwayName ? (
+                    <Input
+                      value={awayTeamName}
+                      onChange={(e) => {
+                        setAwayTeamName(e.target.value);
+                        setSelectedAwayClanId(null); // Clear selection when typing
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown item
+                        setTimeout(() => setIsEditingAwayName(false), 150);
+                      }}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setIsEditingAwayName(false)
+                      }
+                      className="h-7 text-sm font-medium text-center w-24"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingAwayName(true)}
+                      className={`text-sm font-medium flex items-center gap-1 ${ac.hoverText600} transition-colors`}
+                    >
+                      {awayTeamName}
+                      <Edit2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  )}
                 </div>
-              );
-            })}
-
-            {/* BENCH SECTION (Only for 7v7 or 8v8) */}
-            {showBench && (
-              <div className="pt-4 mt-4 border-t border-dashed border-slate-200">
-                <RoundSeparator label="Сэлгээ / Bench" />
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {benchIndices.map((idx) => (
-                    <div key={idx} className="contents">
-                      <DroppableInput id={`away-${idx}`} value={awayPlayers[idx].name} colorSet={ac} isBench onChange={(v: string) => handleManualEdit("away", idx, v)} onClear={() => handleManualEdit("away", idx, "")} />
-                      <DroppableInput id={`home-${idx}`} value={homePlayers[idx].name} colorSet={hc} isBench onChange={(v: string) => handleManualEdit("home", idx, v)} onClear={() => handleManualEdit("home", idx, "")} />
-                    </div>
-                  ))}
-                </div>
+                {/* Search Dropdown */}
+                {isEditingAwayName &&
+                  awaySearchResults &&
+                  awaySearchResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-10 overflow-hidden"
+                    >
+                      {awaySearchResults
+                        .filter((team) => team._id !== selectedHomeClanId)
+                        .slice(0, 5)
+                        .map((team) => (
+                          <button
+                            key={team._id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectAwayTeam(team)}
+                            className={`w-full px-3 py-2 text-left ${ac.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
+                          >
+                            <Users className={`w-3 h-3 ${ac.text400}`} />
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-muted-foreground">
+                              [{team.tag}]
+                            </span>
+                          </button>
+                        ))}
+                    </motion.div>
+                  )}
               </div>
+
+              {/* Players */}
+              <div className="space-y-1.5">
+                {awayPlayers.map((player, index) => (
+                  <div key={index} className="relative">
+                    {player.isEditing ? (
+                      <>
+                        <Input
+                          value={player.name}
+                          onChange={(e) => {
+                            // Update name and clear userId in one operation
+                            const updated = [...awayPlayers];
+                            updated[index] = {
+                              ...updated[index],
+                              name: e.target.value,
+                              userId: null,
+                            };
+                            setAwayPlayers(updated);
+                          }}
+                          onFocus={() => setActiveAwayPlayerIndex(index)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              togglePlayerEdit("away", index);
+                              setActiveAwayPlayerIndex(null);
+                            }, 150);
+                          }}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && togglePlayerEdit("away", index)
+                          }
+                          className="h-8 text-xs text-center"
+                          autoFocus
+                        />
+                        {/* Player Search Dropdown */}
+                        {activeAwayPlayerIndex === index &&
+                          awayPlayerSearchResults &&
+                          awayPlayerSearchResults.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-20 overflow-hidden"
+                            >
+                              {awayPlayerSearchResults
+                                .filter(
+                                  (user) =>
+                                    !awayPlayers.some(
+                                      (p, i) =>
+                                        i !== index && p.userId === user._id,
+                                    ) &&
+                                    !homePlayers.some(
+                                      (p) => p.userId === user._id,
+                                    ),
+                                )
+                                .slice(0, 5)
+                                .map((user) => (
+                                  <button
+                                    key={user._id}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() =>
+                                      handleSelectAwayPlayer(index, user)
+                                    }
+                                    className={`w-full px-3 py-2 text-left ${ac.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
+                                  >
+                                    <User className={`w-3 h-3 ${ac.text400}`} />
+                                    <span className="font-medium">
+                                      {user.fullName}
+                                    </span>
+                                    {user.username && (
+                                      <span className="text-muted-foreground">
+                                        @{user.username}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                            </motion.div>
+                          )}
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => togglePlayerEdit("away", index)}
+                        className={`w-full text-xs ${ac.bg50} ${ac.hoverBg100} rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between`}
+                      >
+                        <span>
+                          {index + 1}. {player.name}
+                        </span>
+                        <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Home Team (Right) */}
+          <Card className={`glass ${hc.border200}`}>
+            <CardContent className="py-4">
+              {/* Team Name */}
+              <div className="relative mb-3">
+                <div className="flex items-center justify-center gap-1">
+                  {/* Tappable badge with radial color picker */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setHomeColorOpen(!homeColorOpen)}
+                      className={`w-6 h-6 rounded-full ${hc.bg500} text-white flex items-center justify-center text-xs font-bold touch-manipulation transition-transform ${homeColorOpen ? "scale-110" : ""}`}
+                    >
+                      2
+                    </button>
+                    <AnimatePresence>
+                      {homeColorOpen && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setHomeColorOpen(false)} />
+                          {TEAM_COLOR_OPTIONS.map((color, i) => {
+                            const angle = Math.PI - (Math.PI / (TEAM_COLOR_OPTIONS.length - 1)) * i;
+                            const radius = 56;
+                            const x = radius * Math.cos(angle);
+                            const y = radius * Math.sin(angle);
+                            const isSelected = homeTeamColor === color;
+                            const isTaken = color === awayTeamColor;
+                            return (
+                              <motion.button
+                                key={color}
+                                initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                animate={{ scale: isTaken ? 0.6 : 1, x, y: -y, opacity: isTaken ? 0.3 : 1 }}
+                                exit={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                                transition={{ delay: i * 0.025, type: "spring", stiffness: 500, damping: 25 }}
+                                disabled={isTaken}
+                                onClick={(e) => { e.stopPropagation(); if (!isTaken) { setHomeTeamColor(color); setHomeColorOpen(false); } }}
+                                className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full shadow-lg touch-manipulation ${isTaken ? "cursor-not-allowed" : ""} ${isSelected ? "ring-[3px] ring-white ring-offset-2" : "border-2 border-white/50"}`}
+                                style={{ backgroundColor: teamColorMap[color].hex }}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  {isEditingHomeName ? (
+                    <Input
+                      value={homeTeamName}
+                      onChange={(e) => {
+                        setHomeTeamName(e.target.value);
+                        setSelectedHomeClanId(null); // Clear selection when typing
+                      }}
+                      onBlur={() => {
+                        // Delay to allow click on dropdown item
+                        setTimeout(() => setIsEditingHomeName(false), 150);
+                      }}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setIsEditingHomeName(false)
+                      }
+                      className="h-7 text-sm font-medium text-center w-24"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingHomeName(true)}
+                      className={`text-sm font-medium flex items-center gap-1 ${hc.hoverText600} transition-colors`}
+                    >
+                      {homeTeamName}
+                      <Edit2 className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+                {/* Search Dropdown */}
+                {isEditingHomeName &&
+                  homeSearchResults &&
+                  homeSearchResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-10 overflow-hidden"
+                    >
+                      {homeSearchResults
+                        .filter((team) => team._id !== selectedAwayClanId)
+                        .slice(0, 5)
+                        .map((team) => (
+                          <button
+                            key={team._id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSelectHomeTeam(team)}
+                            className={`w-full px-3 py-2 text-left ${hc.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
+                          >
+                            <Users className={`w-3 h-3 ${hc.text400}`} />
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-muted-foreground">
+                              [{team.tag}]
+                            </span>
+                          </button>
+                        ))}
+                    </motion.div>
+                  )}
+              </div>
+
+              {/* Players */}
+              <div className="space-y-1.5">
+                {homePlayers.map((player, index) => (
+                  <div key={index} className="relative">
+                    {player.isEditing ? (
+                      <>
+                        <Input
+                          value={player.name}
+                          onChange={(e) => {
+                            // Update name and clear userId in one operation
+                            const updated = [...homePlayers];
+                            updated[index] = {
+                              ...updated[index],
+                              name: e.target.value,
+                              userId: null,
+                            };
+                            setHomePlayers(updated);
+                          }}
+                          onFocus={() => setActiveHomePlayerIndex(index)}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              togglePlayerEdit("home", index);
+                              setActiveHomePlayerIndex(null);
+                            }, 150);
+                          }}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && togglePlayerEdit("home", index)
+                          }
+                          className="h-8 text-xs text-center"
+                          autoFocus
+                        />
+                        {/* Player Search Dropdown */}
+                        {activeHomePlayerIndex === index &&
+                          homePlayerSearchResults &&
+                          homePlayerSearchResults.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border shadow-lg z-20 overflow-hidden"
+                            >
+                              {homePlayerSearchResults
+                                .filter(
+                                  (user) =>
+                                    !homePlayers.some(
+                                      (p, i) =>
+                                        i !== index && p.userId === user._id,
+                                    ) &&
+                                    !awayPlayers.some(
+                                      (p) => p.userId === user._id,
+                                    ),
+                                )
+                                .slice(0, 5)
+                                .map((user) => (
+                                  <button
+                                    key={user._id}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() =>
+                                      handleSelectHomePlayer(index, user)
+                                    }
+                                    className={`w-full px-3 py-2 text-left ${hc.hoverBg50} flex items-center gap-2 text-xs border-b last:border-b-0`}
+                                  >
+                                    <User className={`w-3 h-3 ${hc.text400}`} />
+                                    <span className="font-medium">
+                                      {user.fullName}
+                                    </span>
+                                    {user.username && (
+                                      <span className="text-muted-foreground">
+                                        @{user.username}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                            </motion.div>
+                          )}
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => togglePlayerEdit("home", index)}
+                        className={`w-full text-xs ${hc.bg50} ${hc.hoverBg100} rounded px-2 py-1.5 text-left transition-colors flex items-center justify-between`}
+                      >
+                        <span>
+                          {index + 1}. {player.name}
+                        </span>
+                        <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-50" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Info */}
+        {/* <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-center text-xs text-muted-foreground"
+        >
+          Багийн нэр, тоглогчдын нэрийг засах боломжтой.
+          <br />
+          Тоглолтын үед ч нэр засах боломжтой.
+        </motion.div> */}
+
+        {/* Start Button - Always enabled! */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Button
+            onClick={handleStart}
+            disabled={isCreating}
+            className="w-full h-14 text-lg font-bold gap-2 bg-black text-white hover:bg-black/90 touch-manipulation"
+          >
+            {isCreating ? (
+              "Үүсгэж байна..."
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                ЭХЛҮҮЛЭХ
+              </>
             )}
-          </div>
-
-          <Button onClick={handleStart} disabled={isCreating} className="w-full h-14 text-lg font-bold bg-black text-white shadow-xl rounded-2xl">
-            {isCreating ? "Үүсгэж байна..." : "ТОГЛООМ ЭХЛҮҮЛЭХ"}
           </Button>
-        </div>
-      </div>
-
-      <DragOverlay>
-        {activeId ? (
-          <div className="px-4 py-2 bg-white border-2 border-black rounded-xl shadow-2xl flex items-center gap-2 text-sm font-bold cursor-grabbing">
-            <User className="w-4 h-4" /> {activeId}
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
-  );
-}
-
-function RoundSeparator({ label }: { label: string }) {
-  return (
-    <div className="relative flex items-center">
-      <div className="flex-grow border-t border-slate-100"></div>
-      <span className="mx-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">{label}</span>
-      <div className="flex-grow border-t border-slate-100"></div>
-    </div>
-  );
-}
-
-function PlayerPool({ title, players, colorSet, isAssigned }: any) {
-  return (
-    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-tight">{title}</p>
-      <div className="flex flex-wrap gap-2">
-        {players.map((name: string) => (
-          <DraggablePlayer key={name} name={name} colorSet={colorSet} disabled={isAssigned(name)} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DraggablePlayer({ name, colorSet, disabled }: any) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: name, disabled });
-  const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
-
-  return (
-    <div ref={setNodeRef} style={style} {...(!disabled ? listeners : {})} {...(!disabled ? attributes : {})}
-      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-2 border transition-all
-        ${disabled ? 'bg-slate-50 border-slate-100 text-slate-300 opacity-40' : `${colorSet.bg50} ${colorSet.border200} hover:border-slate-400 shadow-sm cursor-grab active:cursor-grabbing`}`}
-    >
-      {!disabled && <GripVertical className="w-3 h-3 text-slate-400" />}
-      {name}
-    </div>
-  );
-}
-
-function DroppableInput({ id, value, colorSet, onClear, onChange, isBench }: any) {
-  const { isOver, setNodeRef } = useDroppable({ id });
-
-  return (
-    <div ref={setNodeRef} className={`relative flex items-center gap-2 p-1 rounded-xl transition-all border-2 
-      ${isOver ? 'border-dashed border-blue-400 bg-blue-50' : 'border-transparent'}`}>
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isBench ? 'bg-slate-100 text-slate-400' : colorSet.bg100 + ' ' + colorSet.text600}`}>
-        <User className="w-4 h-4" />
-      </div>
-      <div className="relative flex-1 group">
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={isBench ? "Сэлгээ..." : "Нэр..."}
-          className={`h-10 text-xs border-none bg-slate-50/50 focus-visible:ring-1 font-medium pr-8 ${isBench ? 'italic' : ''}`} />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {value ? (
-            <button onClick={onClear} className="w-5 h-5 flex items-center justify-center bg-white rounded border border-slate-200 text-slate-400 hover:text-red-500 transition-colors">
-              <X className="w-3 h-3" />
-            </button>
-          ) : <Edit2 className="w-3 h-3 text-slate-200 group-hover:text-slate-400" />}
-        </div>
+        </motion.div>
       </div>
     </div>
   );
