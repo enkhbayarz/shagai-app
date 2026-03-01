@@ -334,4 +334,21 @@ export default defineSchema({
     phaseIndex: v.number(),
     timestamp: v.number(),
   }).index("by_game", ["teamGameId"]),
+  archives: defineTable({
+    title: v.string(),
+    organizerName: v.string(),
+    organizerContact: v.string(),
+    startDate: v.string(),
+    endDate: v.string(),
+    locationName: v.string(),
+    mapAddress: v.string(),
+    country: v.string(),
+    city: v.string(),
+    state: v.string(),
+    teams: v.array(v.any()), // You can define stricter types here later
+    teamRankings: v.any(),
+    individualRankings: v.any(),
+    userId: v.string(),
+    createdAt: v.number(),
+  }),
 });
