@@ -101,6 +101,12 @@
   --cyan-accent: #06b6d4;
 }
 
+html,
+body {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
 .dark {
   /* Dark mode - using hex colors for html2canvas compatibility */
   --background: #0a0a0a;

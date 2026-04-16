@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
+import { DisableMobileZoom } from "@/components/providers/DisableMobileZoom";
 import { Toaster } from "@/components/ui/sonner";
 import { LayoutWrapper } from "@/components/layout";
 
@@ -41,6 +42,7 @@ export default function RootLayout({
           />
         </head>
         <body className="antialiased min-h-screen">
+          <DisableMobileZoom />
           <ConvexClientProvider>
             <main className="relative min-h-screen noise">
               <LayoutWrapper>{children}</LayoutWrapper>
