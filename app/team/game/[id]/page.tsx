@@ -388,7 +388,7 @@ export default function TeamGamePage() {
   const isGoldenPoint = game.goldenPoint?.isActive;
 
   return (
-    <div className="min-h-screen pb-52">
+    <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-[calc(8rem+env(safe-area-inset-bottom))]">
       {/* Header Portal Buttons */}
       {headerEl &&
         createPortal(
