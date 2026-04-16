@@ -77,7 +77,18 @@ export function PhaseSection({
   };
 
   const shootersContent = (
-    <div className="flex justify-center gap-1 overflow-x-auto pb-1">
+    <div
+      className={
+        compact
+          ? "grid w-full gap-1 overflow-visible pb-1"
+          : "flex justify-center gap-1 overflow-x-auto pb-1"
+      }
+      style={
+        compact
+          ? { gridTemplateColumns: `repeat(${displayShooters.length}, minmax(0, 1fr))` }
+          : undefined
+      }
+    >
       {displayShooters.map((shooter, displayIndex) => {
         const originalIndex = getOriginalIndex(displayIndex);
         const isCurrentShooter = isActive && originalIndex === currentShooterIndex;
@@ -100,6 +111,7 @@ export function PhaseSection({
             }
             onEditName={onEditPlayerName}
             displayColor={displayColorForShooter}
+            compact={compact}
           />
         );
       })}

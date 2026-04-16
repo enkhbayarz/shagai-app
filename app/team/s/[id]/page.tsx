@@ -65,7 +65,15 @@ export default function TeamSharePage() {
   const gameId = params.id as Id<"teamGames">;
 
   const game = useQuery(api.teamGames.getPublic, { id: gameId });
-  const [expandedSet, setExpandedSet] = useState<number | null>(null);
+  const [expandedSets, setExpandedSets] = useState<number[]>([]);
+
+  const toggleExpandedSet = (setNumber: number) => {
+    setExpandedSets((current) =>
+      current.includes(setNumber)
+        ? current.filter((expandedSet) => expandedSet !== setNumber)
+        : [...current, setNumber]
+    );
+  };
 
   if (game === undefined) {
     return (
@@ -271,14 +279,10 @@ export default function TeamSharePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 + setIndex * 0.1 }}
-            className="bg-white rounded-2xl shadow-lg border mb-4 overflow-hidden"
+            className="bg-white rounded-2xl shadow-lg mb-4 overflow-hidden"
           >
             <button
-              onClick={() =>
-                setExpandedSet(
-                  expandedSet === set.setNumber ? null : set.setNumber
-                )
-              }
+              onClick={() => toggleExpandedSet(set.setNumber)}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors touch-manipulation"
             >
               <div className="flex items-center gap-2">
@@ -290,7 +294,7 @@ export default function TeamSharePage() {
                   ({set.phases.length} үе)
                 </span>
               </div>
-              {expandedSet === set.setNumber ? (
+              {expandedSets.includes(set.setNumber) ? (
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
               ) : (
                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -298,7 +302,7 @@ export default function TeamSharePage() {
             </button>
 
             <AnimatePresence>
-              {expandedSet === set.setNumber && (
+              {expandedSets.includes(set.setNumber) && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -333,6 +337,7 @@ export default function TeamSharePage() {
                             awayTeamPlayers={game.awayTeam.players}
                             awayColor={awayColor}
                             homeColor={homeColor}
+                            compact
                           />
                         </div>
                       );

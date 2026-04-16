@@ -14,6 +14,7 @@ interface TeamPlayerCardProps {
   onEditShot?: (shotIndex: number) => void;
   onEditName?: (team: "home" | "away", playerIndex: number) => void;
   displayColor?: TeamColor;
+  compact?: boolean;
 }
 
 export function TeamPlayerCard({
@@ -26,6 +27,7 @@ export function TeamPlayerCard({
   onEditShot,
   onEditName,
   displayColor,
+  compact = false,
 }: TeamPlayerCardProps) {
   const effectiveColor = displayColor ?? (team === "home" ? "blue" : "orange");
   const c = getTeamColors(effectiveColor, "orange");
@@ -37,7 +39,7 @@ export function TeamPlayerCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={`relative rounded-lg border-2 ${c.border500} ${isCurrentShooter ? c.bg50 : "bg-white"} p-2 w-[90px] flex-shrink-0 transition-all ${
+      className={`relative rounded-lg ${compact ? "border p-1 w-full min-w-0" : "border-2 p-2 w-[90px] flex-shrink-0"} ${c.border500} ${isCurrentShooter ? c.bg50 : "bg-white"} transition-all ${
         isCurrentShooter ? "ring-2 ring-amber-400 ring-offset-1" : ""
       }`}
     >
@@ -49,9 +51,9 @@ export function TeamPlayerCard({
       >
         <div className="flex justify-center mb-1 relative">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${c.bg100}`}
+            className={`${compact ? "w-6 h-6" : "w-8 h-8"} rounded-full flex items-center justify-center ${c.bg100}`}
           >
-            <User className={`w-4 h-4 ${c.text600}`} />
+            <User className={`${compact ? "w-3 h-3" : "w-4 h-4"} ${c.text600}`} />
           </div>
           {onEditName && (
             <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-gray-200 rounded-full flex items-center justify-center">
@@ -61,13 +63,13 @@ export function TeamPlayerCard({
         </div>
 
         {/* Player Name */}
-        <div className="text-center text-[10px] font-medium truncate mb-1 leading-tight">
+        <div className={`${compact ? "text-[8px]" : "text-[10px]"} text-center font-medium truncate mb-1 leading-tight`}>
           {displayName}
         </div>
       </button>
 
       {/* Shot Indicators - 2-Column Grid */}
-      <div className="grid grid-cols-2 gap-1 justify-items-center">
+      <div className={`grid grid-cols-2 ${compact ? "gap-0.5" : "gap-1"} justify-items-center`}>
         {shots.map((shot, i) => {
           const isCurrentShot = isCurrentShooter && i === currentShotIndex;
           let bgClass = "bg-gray-300"; // unshot
@@ -91,7 +93,7 @@ export function TeamPlayerCard({
               onClick={() => isEditable && onEditShot?.(i)}
               disabled={!isEditable}
               aria-label={ariaLabel}
-              className={`w-4 h-4 rounded-full transition-all ${bgClass} ${
+              className={`${compact ? "w-3 h-3" : "w-4 h-4"} rounded-full transition-all ${bgClass} ${
                 isCurrentShot ? "ring-2 ring-amber-400 scale-125" : ""
               } ${isEditable ? "cursor-pointer hover:opacity-80" : ""}`}
             />

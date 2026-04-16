@@ -60,7 +60,7 @@ export function TeamFinishedModal({
   awayTeamPlayers,
 }: TeamFinishedModalProps) {
   const [copied, setCopied] = useState(false);
-  const [expandedSet, setExpandedSet] = useState<number | null>(null);
+  const [expandedSets, setExpandedSets] = useState<number[]>([]);
   const [shareUrl, setShareUrl] = useState("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,6 +94,14 @@ export function TeamFinishedModal({
     } catch (err) {
       console.error("Failed to copy:", err);
     }
+  };
+
+  const toggleExpandedSet = (setNumber: number) => {
+    setExpandedSets((current) =>
+      current.includes(setNumber)
+        ? current.filter((expandedSet) => expandedSet !== setNumber)
+        : [...current, setNumber],
+    );
   };
 
   return (
@@ -211,14 +219,10 @@ export function TeamFinishedModal({
                 {sets.map((set) => (
                   <div
                     key={set.setNumber}
-                    className="border rounded-xl overflow-hidden"
+                    className="rounded-xl overflow-hidden"
                   >
                     <button
-                      onClick={() =>
-                        setExpandedSet(
-                          expandedSet === set.setNumber ? null : set.setNumber,
-                        )
-                      }
+                      onClick={() => toggleExpandedSet(set.setNumber)}
                       className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors touch-manipulation"
                     >
                       <div className="flex items-center gap-2">
@@ -230,7 +234,7 @@ export function TeamFinishedModal({
                           ({set.phases.length} үе)
                         </span>
                       </div>
-                      {expandedSet === set.setNumber ? (
+                      {expandedSets.includes(set.setNumber) ? (
                         <ChevronUp className="w-4 h-4 text-muted-foreground" />
                       ) : (
                         <ChevronDown className="w-4 h-4 text-muted-foreground" />
@@ -238,7 +242,7 @@ export function TeamFinishedModal({
                     </button>
 
                     <AnimatePresence>
-                      {expandedSet === set.setNumber && (
+                      {expandedSets.includes(set.setNumber) && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
