@@ -51,8 +51,9 @@ interface ShooterConfig {
  *   Phase 3: players 4,5 from each team
  *
  * SPECIAL RULE for 6v6:
- *   On the first cycle of every phase, only 2 shooters (one from each team)
- *   After cycle 1, normal 4 shooters
+ *   On the first cycle of Niileg, the first round resolves by team pairs:
+ *   first player shoots, their teammate is skipped, then the other team shoots.
+ *   The displayed seating order stays unchanged; recordShot controls the jump.
  *
  * SET 2 SIDE SWAP:
  *   In Set 2, teams swap physical positions
@@ -68,9 +69,6 @@ function generateShooterOrder(
   setNumber: number = 1
 ): ShooterConfig[] {
   const shooters: ShooterConfig[] = [];
-
-  // 6v6 special rule: first cycle first round has skips (handled in recordShot)
-  // All 4 shooters are still created, skip logic is handled separately
 
   // Set 2 side swap: teams swap positions, so swap the team assignments
   // In Set 2, "home" becomes physically on left, "away" on right
@@ -199,6 +197,35 @@ function createInitialPhase(
     })),
     isCompleted: false,
   };
+}
+
+function isSixVsSixOpeningNiilegRound(
+  playersPerTeam: 3 | 4 | 5 | 6,
+  phase: { phaseType: string; cycle: number },
+  shotIndex: number
+) {
+  return (
+    playersPerTeam === 6 &&
+    phase.phaseType === "niileg" &&
+    phase.cycle === 1 &&
+    shotIndex === 0
+  );
+}
+
+function getOpeningTeamOrder(shooters: { team: Team }[]) {
+  const order: Team[] = [];
+  for (const shooter of shooters) {
+    if (!order.includes(shooter.team)) {
+      order.push(shooter.team);
+    }
+  }
+  return order;
+}
+
+function getOpeningTeamIndices(shooters: { team: Team }[], team: Team) {
+  return shooters
+    .map((shooter, index) => (shooter.team === team ? index : -1))
+    .filter((index) => index !== -1);
 }
 
 // ============================================
@@ -419,6 +446,28 @@ export const recordShot = mutation({
     const currentPhase = { ...phases[game.currentPhaseIndex] };
     const shooters = [...currentPhase.shooters];
     const currentShooter = { ...shooters[game.currentShooterIndex] };
+    const isOpeningNiilegRound = isSixVsSixOpeningNiilegRound(
+      game.playersPerTeam,
+      currentPhase,
+      game.currentShotInTurn
+    );
+    const currentOpeningTeamIndices = isOpeningNiilegRound
+      ? getOpeningTeamIndices(shooters, currentShooter.team)
+      : [];
+    const currentOpeningTeamFirstIndex = currentOpeningTeamIndices[0] ?? -1;
+    const currentOpeningTeamMateIndex =
+      currentOpeningTeamIndices.find((index) => index !== game.currentShooterIndex) ?? -1;
+    const currentOpeningTeamMate =
+      currentOpeningTeamMateIndex >= 0 ? shooters[currentOpeningTeamMateIndex] : null;
+    const canUseOpeningSkip =
+      isOpeningNiilegRound &&
+      game.currentShooterIndex === currentOpeningTeamFirstIndex &&
+      currentOpeningTeamMate !== null &&
+      currentOpeningTeamMate.shots[game.currentShotInTurn] === null;
+
+    if (args.isSkip && !canUseOpeningSkip) {
+      throw new Error("Skip is only allowed for the first player of a 6v6 opening Niileg pair");
+    }
 
     // Record the shot (or skip)
     // In rotation mode, currentShotInTurn represents the "round" (which shot slot we're filling)
@@ -687,6 +736,63 @@ export const recordShot = mutation({
           return { gameEnded: true, winner };
         }
       }
+    }
+
+    if (isOpeningNiilegRound) {
+      let nextShooterIndex: number;
+      let nextShotInTurn = game.currentShotInTurn;
+      const teamOrder = getOpeningTeamOrder(shooters);
+      const currentTeamPosition = teamOrder.indexOf(currentShooter.team);
+      const nextTeam = teamOrder[currentTeamPosition + 1];
+
+      const moveToNextTeamOrRound = () => {
+        if (nextTeam) {
+          const nextTeamIndices = getOpeningTeamIndices(shooters, nextTeam);
+          return {
+            shooterIndex: nextTeamIndices[0] ?? 0,
+            shotInTurn: game.currentShotInTurn,
+          };
+        }
+
+        return {
+          shooterIndex: 0,
+          shotInTurn: game.currentShotInTurn + 1,
+        };
+      };
+
+      if (args.isSkip) {
+        nextShooterIndex = currentOpeningTeamMateIndex;
+      } else {
+        if (
+          game.currentShooterIndex === currentOpeningTeamFirstIndex &&
+          currentOpeningTeamMateIndex >= 0 &&
+          shooters[currentOpeningTeamMateIndex].shots[game.currentShotInTurn] === null
+        ) {
+          const skippedMate = { ...shooters[currentOpeningTeamMateIndex] };
+          const skippedMateShots = [...skippedMate.shots];
+          skippedMateShots[game.currentShotInTurn] = "skip";
+          skippedMate.shots = skippedMateShots;
+          shooters[currentOpeningTeamMateIndex] = skippedMate;
+          currentPhase.shooters = shooters;
+        }
+
+        const nextOpeningTurn = moveToNextTeamOrRound();
+        nextShooterIndex = nextOpeningTurn.shooterIndex;
+        nextShotInTurn = nextOpeningTurn.shotInTurn;
+      }
+
+      phases[game.currentPhaseIndex] = currentPhase;
+      currentSet.phases = phases;
+      sets[currentSetIndex] = currentSet;
+
+      await ctx.db.patch(args.gameId, {
+        sets,
+        currentPhaseIndex: game.currentPhaseIndex,
+        currentShooterIndex: nextShooterIndex,
+        currentShotInTurn: nextShotInTurn,
+      });
+
+      return { setEnded: false, gameEnded: false };
     }
 
     // Advance state - ROTATION MODE

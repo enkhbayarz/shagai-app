@@ -105,49 +105,6 @@ export default function TeamGamePage() {
     }
   }, [game?.pendingSetTransition]);
 
-  // Auto-skip for 6v6 first round: if second shooter's teammate already shot, auto-skip
-  // ONLY applies to: niileg phase, first cycle (both Set 1 and Set 2)
-  useEffect(() => {
-    if (!game || game.status === "finished" || isRecording) return;
-    if (game.playersPerTeam !== 6) return;
-
-    const currentSetData = game.sets[game.currentSet - 1];
-    const currentPhaseData = currentSetData?.phases[game.currentPhaseIndex];
-    if (!currentPhaseData) return;
-
-    // Only for niileg phase (НИЙЛЭГ ҮЕ)
-    if (currentPhaseData.phaseType !== "niileg") return;
-
-    // Only in first cycle, first round
-    if (currentPhaseData.cycle !== 1 || game.currentShotInTurn !== 0) return;
-
-    // Only for shooters 2 and 3 (second shooter from each team)
-    if (game.currentShooterIndex < 2) return;
-
-    const shooters = currentPhaseData.shooters;
-    const currentShooterData = shooters[game.currentShooterIndex];
-    if (!currentShooterData) return;
-
-    // Find teammate (first shooter from same team)
-    // If current is index 2 (home second), check index 0 (home first)
-    // If current is index 3 (away second), check index 1 (away first)
-    const teammateIndex = currentShooterData.team === shooters[0]?.team ? 0 : 1;
-    const teammateShot = shooters[teammateIndex]?.shots[0];
-
-    // If teammate shot (hit or miss, not skip), auto-skip this one
-    if (teammateShot === true || teammateShot === false) {
-      // Auto-skip: trigger skip without user interaction
-      recordShot({ gameId, isSkip: true }).catch(console.error);
-    }
-  }, [
-    game?.currentShooterIndex,
-    game?.currentPhaseIndex,
-    game?.currentShotInTurn,
-    game?.currentSet,
-    gameId,
-    isRecording,
-  ]);
-
   // Distinguish loading from not found
   if (game === undefined) {
     return (
@@ -224,19 +181,26 @@ export default function TeamGamePage() {
   // Determine if skip button should be shown (6v6, first cycle of niileg only)
   const shouldShowSkipButton = () => {
     if (!currentPhase || !currentShooter) return false;
-    // Only for 6v6 games
     if (game.playersPerTeam !== 6) return false;
-    // Only for niileg phase (НИЙЛЭГ ҮЕ)
     if (currentPhase.phaseType !== "niileg") return false;
-    // Only for first round (shot index 0)
     if (game.currentShotInTurn !== 0) return false;
-    // Only for first cycle
     if (currentPhase.cycle !== 1) return false;
-    // Only for first shooter of each team (indices 0 and 1 in the shooter array)
-    // Shooter 0: Home first, Shooter 1: Away first
-    // Shooter 2: Home second, Shooter 3: Away second
-    if (game.currentShooterIndex >= 2) return false;
-    return true;
+
+    const currentTeamIndices = currentPhase.shooters
+      .map((shooter, index) =>
+        shooter.team === currentShooter.team ? index : -1,
+      )
+      .filter((index) => index !== -1);
+    const firstTeamShooterIndex = currentTeamIndices[0];
+    const mateIndex = currentTeamIndices.find(
+      (index) => index !== game.currentShooterIndex,
+    );
+
+    return (
+      game.currentShooterIndex === firstTeamShooterIndex &&
+      mateIndex !== undefined &&
+      currentPhase.shooters[mateIndex]?.shots[game.currentShotInTurn] === null
+    );
   };
 
   // Handle shot editing
